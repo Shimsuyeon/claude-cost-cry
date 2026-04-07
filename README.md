@@ -4,13 +4,17 @@
 [![license](https://img.shields.io/npm/l/claude-cost-cry.svg)](LICENSE)
 
 > Your wallet cries every time you call Claude. Watch it happen in real-time.
-> AI 비용으로 얇아지는 내 지갑을 실시간으로 살펴보세요 (ㅠㅠ)
 
 [한국어](README.ko.md)
 
 ## What is this?
 
 A real-time cost tracker for Claude Code (and other LLM providers) that makes you *feel* every dollar leaving your wallet — with emotional messages, everyday equivalents, and a floating desktop widget.
+
+
+<img width="300" alt="image" src="https://github.com/user-attachments/assets/fd8da839-cad9-4b15-998a-7b5eb4a93b9b" />
+
+
 
 ```
 $ cost-cry
@@ -34,6 +38,11 @@ $ cost-cry
   💸 +$0.06  →  Total: $8.79  🍗 0.5
      "Your wallet is literally crying"
 ```
+
+<div>
+<img width="300" alt="image" src="https://github.com/user-attachments/assets/ffd41048-6576-4a68-854a-0642b89acee5" />
+<img width="300" alt="image" src="https://github.com/user-attachments/assets/5d84231b-27eb-45a4-80a5-2da6de4162ae" />
+</div>
 
 ## Emotional Cost Tiers
 
