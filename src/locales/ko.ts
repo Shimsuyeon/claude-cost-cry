@@ -145,7 +145,7 @@ const ko = {
 
   // ── overlay: settings ──
   'settings.currency': '통화',
-  'settings.dailyBudget': '일일 예산',
+  'settings.dailyBudget': '일일 예산 (USD)',
   'settings.budgetPlaceholder': '미설정',
   'settings.equivUnit': '환산 단위',
   'settings.autoUnit': '🔄 자동',

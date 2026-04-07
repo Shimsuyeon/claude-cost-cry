@@ -145,7 +145,7 @@ const en = {
 
   // ── overlay: settings ──
   'settings.currency': 'Currency',
-  'settings.dailyBudget': 'Daily budget',
+  'settings.dailyBudget': 'Daily budget (USD)',
   'settings.budgetPlaceholder': 'Not set',
   'settings.equivUnit': 'Equivalent',
   'settings.autoUnit': '🔄 Auto',
