@@ -1210,6 +1210,28 @@
   // ── Update check ──
 
   updateBtn.addEventListener('click', async () => {
+    if (updateBtn.classList.contains('has-update')) {
+      updateBtn.textContent = loc('settings.updating');
+      updateBtn.classList.remove('has-update');
+      updateBtn.classList.add('checking');
+      try {
+        const result = await window.bridge.runUpdate();
+        if (result.success) {
+          updateBtn.textContent = loc('settings.updateDone');
+          updateBtn.classList.remove('checking');
+        } else {
+          updateBtn.textContent = loc('settings.updateFailed');
+          updateBtn.classList.remove('checking');
+          setTimeout(() => { updateBtn.textContent = loc('settings.checkUpdate'); }, 3000);
+        }
+      } catch {
+        updateBtn.textContent = loc('settings.updateFailed');
+        updateBtn.classList.remove('checking');
+        setTimeout(() => { updateBtn.textContent = loc('settings.checkUpdate'); }, 3000);
+      }
+      return;
+    }
+
     updateBtn.classList.add('checking');
     updateBtn.textContent = loc('settings.checking');
 
@@ -1221,14 +1243,6 @@
         updateBtn.textContent = loc('settings.updateAvailable', { version: info.latest });
         updateBtn.classList.remove('checking');
         updateBtn.classList.add('has-update');
-
-        updateBtn.onclick = () => {
-          navigator.clipboard.writeText('npm update -g claude-cost-cry');
-          updateBtn.textContent = loc('settings.cmdCopied');
-          setTimeout(() => {
-            updateBtn.textContent = loc('settings.updateAvailable', { version: info.latest });
-          }, 2000);
-        };
       } else {
         updateBtn.textContent = loc('settings.latestVersion');
         updateBtn.classList.remove('checking', 'has-update');

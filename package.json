@@ -1,6 +1,6 @@
 {
   "name": "claude-cost-cry",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "Emotionally experience your API costs — real-time tracker with floating widget",
   "type": "module",
   "bin": {

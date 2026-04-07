@@ -379,6 +379,24 @@ app.whenReady().then(async () => {
     }
   });
 
+  ipcMain.handle('run-update', async () => {
+    const { execSync } = require('child_process');
+    try {
+      execSync('npm install -g claude-cost-cry@latest', {
+        encoding: 'utf-8',
+        timeout: 60_000,
+        stdio: 'pipe',
+      });
+      setTimeout(() => {
+        app.relaunch();
+        app.exit(0);
+      }, 1500);
+      return { success: true };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  });
+
   ipcMain.on('resize-widget', (_e, expanded) => {
     if (!overlay) return;
     const h = expanded ? WIDGET_HEIGHT_EXPANDED : WIDGET_HEIGHT;

@@ -157,7 +157,9 @@ const ko = {
   'settings.latestVersion': '✓ 최신 버전',
   'settings.checking': '확인 중...',
   'settings.checkFailed': '확인 실패',
-  'settings.cmdCopied': '✓ 명령어 복사됨',
+  'settings.updating': '업데이트 중...',
+  'settings.updateDone': '✓ 업데이트 완료! 재시작 중...',
+  'settings.updateFailed': '업데이트 실패',
   'settings.language': '언어',
 
   // ── overlay: exchange source ──

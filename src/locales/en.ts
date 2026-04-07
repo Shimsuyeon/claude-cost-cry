@@ -157,7 +157,9 @@ const en = {
   'settings.latestVersion': '✓ Up to date',
   'settings.checking': 'Checking...',
   'settings.checkFailed': 'Check failed',
-  'settings.cmdCopied': '✓ Command copied',
+  'settings.updating': 'Updating...',
+  'settings.updateDone': '✓ Updated! Restarting...',
+  'settings.updateFailed': 'Update failed',
   'settings.language': 'Language',
 
   // ── overlay: exchange source ──
