@@ -3,6 +3,11 @@
 const args = process.argv.slice(2);
 const command = args[0];
 
+const { t, setLocale } = await import('../dist/i18n.js');
+const { loadConfig: _lc } = await import('../dist/config.js');
+const _initCfg = _lc();
+if (_initCfg.language) setLocale(_initCfg.language);
+
 if (command === 'config') {
   const { updateConfig, loadConfig } = await import('../dist/config.js');
   const { showConfigUpdate, showInfo } = await import('../dist/display.js');
@@ -16,46 +21,50 @@ if (command === 'config') {
     const { getExchangeRate, SUPPORTED_CURRENCIES } = await import('../dist/exchange.js');
     const allItems = getAllEquivalents(config);
     const unitDisplay = config.equivalentUnit === 'auto'
-      ? '자동'
+      ? t('cli.autoUnit')
       : `${config.equivalentUnit}`;
     const exchange = await getExchangeRate(config);
     console.log();
-    showInfo('현재 설정:');
-    console.log(`  일일 예산:    ${config.dailyBudget ? `$${config.dailyBudget}` : '제한 없음'}`);
-    console.log(`  월간 예산:    ${config.monthlyBudget ? `$${config.monthlyBudget}` : '제한 없음'}`);
-    console.log(`  통화:         ${config.currency || 'USD'}`);
+    showInfo(t('cli.currentConfig'));
+    console.log(`  ${t('cli.dailyBudget')}    ${config.dailyBudget ? `$${config.dailyBudget}` : t('cli.noLimit')}`);
+    console.log(`  ${t('cli.monthlyBudget')}    ${config.monthlyBudget ? `$${config.monthlyBudget}` : t('cli.noLimit')}`);
+    console.log(`  ${t('cli.currency')}         ${config.currency || 'USD'}`);
     if (exchange && exchange.currency !== 'USD') {
-      const srcLabel = { api: '실시간', cache: '캐시', 'stale-cache': '오래된 캐시', manual: '수동', base: '' };
-      console.log(`  💱 환율:      1 USD = ${exchange.rate.toLocaleString()} ${exchange.currency} (${srcLabel[exchange.source] || ''} ${exchange.updatedAt || ''})`);
+      const srcLabel = {
+        api: t('exchange.src.api'), cache: t('exchange.src.cache'),
+        'stale-cache': t('exchange.src.staleCache'), manual: t('exchange.src.manual'), base: ''
+      };
+      console.log(`  ${t('cli.exchangeRate')}      1 USD = ${exchange.rate.toLocaleString()} ${exchange.currency} (${srcLabel[exchange.source] || ''} ${exchange.updatedAt || ''})`);
     }
     if (config.exchangeRate) {
-      console.log(`  환율 고정:    ${config.exchangeRate}`);
+      console.log(`  ${t('cli.exchangeFixed')}    ${config.exchangeRate}`);
     }
-    console.log(`  절약 넛지:    ${config.showNudge ? '켜짐' : '꺼짐'}`);
-    console.log(`  환산 단위:    ${unitDisplay}`);
+    console.log(`  ${t('cli.nudge')}    ${config.showNudge ? t('cli.nudgeOn') : t('cli.nudgeOff')}`);
+    console.log(`  ${t('cli.equivUnit')}    ${unitDisplay}`);
     if (config.customEquivalents?.length > 0) {
-      console.log(`  커스텀 단위:  ${config.customEquivalents.map(e => `${e.emoji} ${e.name}`).join(', ')}`);
+      console.log(`  ${t('cli.customUnits')}  ${config.customEquivalents.map(e => `${e.emoji} ${e.name}`).join(', ')}`);
     }
+    console.log(`  ${t('cli.language')}        ${config.language || 'en'}`);
     console.log();
     if (config.logSources?.length > 0) {
-      console.log(`  로그 소스:`);
-      console.log(`     🟣 Claude Code (자동 감지)`);
+      console.log(`  ${t('cli.logSources')}`);
+      console.log(`     🟣 ${t('cli.claudeAuto')}`);
       for (const src of config.logSources) {
         const providerEmoji = { claude: '🟣', openai: '🟢', google: '🔵', cursor: '⚡' }[src.provider] || '⚪';
         if (src.path) {
           console.log(`     ${providerEmoji} ${src.provider}: ${src.path}`);
         } else {
-          console.log(`     ${providerEmoji} ${src.provider} (API 폴링)`);
+          console.log(`     ${providerEmoji} ${src.provider} ${t('cli.apiPolling')}`);
         }
       }
     } else {
-      console.log(`  로그 소스:    🟣 Claude Code (자동 감지)`);
+      console.log(`  ${t('cli.logSources')}    🟣 ${t('cli.claudeAuto')}`);
     }
     console.log();
-    console.log(`  사용 가능한 단위: ${allItems.map(e => e.name).join(', ')}`);
-    console.log(`  지원 통화: ${SUPPORTED_CURRENCIES.join(', ')}`);
+    console.log(`  ${t('cli.availableUnits')} ${allItems.map(e => e.name).join(', ')}`);
+    console.log(`  ${t('cli.supportedCurrencies')} ${SUPPORTED_CURRENCIES.join(', ')}`);
     console.log();
-    showInfo('설정 변경: cost-cry config --daily-budget 10');
+    showInfo(t('cli.configHint'));
     console.log();
     process.exit(0);
   }
@@ -68,37 +77,37 @@ if (command === 'config') {
       case '--daily-budget':
       case '-d':
         updateConfig({ dailyBudget: value === 'off' ? null : parseFloat(value) });
-        showConfigUpdate('일일 예산', value === 'off' ? '제한 없음' : `$${value}`);
+        showConfigUpdate(t('cli.dailyBudget'), value === 'off' ? t('cli.noLimit') : `$${value}`);
         i += 2;
         break;
       case '--monthly-budget':
         updateConfig({ monthlyBudget: value === 'off' ? null : parseFloat(value) });
-        showConfigUpdate('월간 예산', value === 'off' ? '제한 없음' : `$${value}`);
+        showConfigUpdate(t('cli.monthlyBudget'), value === 'off' ? t('cli.noLimit') : `$${value}`);
         i += 2;
         break;
       case '--nudge':
         updateConfig({ showNudge: value !== 'off' });
-        showConfigUpdate('절약 넛지', value === 'off' ? '꺼짐' : '켜짐');
+        showConfigUpdate(t('cli.nudge'), value === 'off' ? t('cli.nudgeOff') : t('cli.nudgeOn'));
         i += 2;
         break;
       case '--unit':
         updateConfig({ equivalentUnit: value === 'auto' ? 'auto' : value });
-        showConfigUpdate('환산 단위', value === 'auto' ? '자동' : value);
+        showConfigUpdate(t('cli.equivUnit'), value === 'auto' ? t('cli.autoUnit') : value);
         i += 2;
         break;
       case '--add-unit': {
-        // format: "이름:가격:이모지" 또는 "이름:가격:이모지:단위"
         const parts = value.split(':');
         if ((parts.length !== 3 && parts.length !== 4) || isNaN(parseFloat(parts[1]))) {
-          console.error('  ❌ 형식: --add-unit "이름:가격:이모지:단위"  예: "떡볶이:3.5:🍜:그릇"');
+          console.error(`  ${t('cli.unitFormatError')}`);
           process.exit(1);
         }
-        const newItem = { name: parts[0], price: parseFloat(parts[1]), emoji: parts[2], unit: parts[3] || '개' };
+        const defaultUnit = t('display.defaultUnit') || '';
+        const newItem = { name: parts[0], price: parseFloat(parts[1]), emoji: parts[2], unit: parts[3] || defaultUnit };
         const cfg = loadConfig();
         const customs = (cfg.customEquivalents || []).filter(e => e.name !== newItem.name);
         customs.push(newItem);
         updateConfig({ customEquivalents: customs });
-        showConfigUpdate('커스텀 단위 추가', `${newItem.emoji} ${newItem.name} ($${newItem.price})`);
+        showConfigUpdate(t('cli.customUnits'), `${newItem.emoji} ${newItem.name} ($${newItem.price})`);
         i += 2;
         break;
       }
@@ -106,7 +115,7 @@ if (command === 'config') {
         const cfg2 = loadConfig();
         const filtered = (cfg2.customEquivalents || []).filter(e => e.name !== value);
         updateConfig({ customEquivalents: filtered });
-        showConfigUpdate('커스텀 단위 삭제', value);
+        showConfigUpdate(t('cli.customUnits'), value);
         i += 2;
         break;
       }
@@ -114,26 +123,26 @@ if (command === 'config') {
         const { SUPPORTED_CURRENCIES } = await import('../dist/exchange.js');
         const cur = value.toUpperCase();
         if (!SUPPORTED_CURRENCIES.includes(cur)) {
-          console.error(`  ❌ 지원하지 않는 통화: ${cur}. 지원: ${SUPPORTED_CURRENCIES.join(', ')}`);
+          console.error(`  ${t('cli.unknownCurrency', { currency: cur, supported: SUPPORTED_CURRENCIES.join(', ') })}`);
           process.exit(1);
         }
         updateConfig({ currency: cur });
-        showConfigUpdate('통화', cur);
+        showConfigUpdate(t('cli.currency'), cur);
         i += 2;
         break;
       }
       case '--exchange-rate': {
         if (value === 'auto') {
           updateConfig({ exchangeRate: null });
-          showConfigUpdate('환율', '자동 (API)');
+          showConfigUpdate(t('cli.exchangeRate'), 'Auto (API)');
         } else {
           const rate = parseFloat(value);
           if (isNaN(rate) || rate <= 0) {
-            console.error('  ❌ 유효한 환율을 입력하세요. 예: --exchange-rate 1350');
+            console.error(`  ${t('cli.invalidRate')}`);
             process.exit(1);
           }
           updateConfig({ exchangeRate: rate });
-          showConfigUpdate('환율 고정', `${rate}`);
+          showConfigUpdate(t('cli.exchangeFixed'), `${rate}`);
         }
         i += 2;
         break;
@@ -145,27 +154,27 @@ if (command === 'config') {
         if (colonIdx === -1) {
           const provider = gp(value);
           if (!provider) {
-            console.error(`  ❌ 알 수 없는 프로바이더: ${value}. 지원: ${getProviderNames().join(', ')}`);
+            console.error(`  ${t('cli.unknownProvider', { provider: value, supported: getProviderNames().join(', ') })}`);
             process.exit(1);
           }
           if (provider.isApiProvider) {
             if (!provider.isAvailable?.()) {
-              console.error(`  ❌ ${provider.displayName}이(가) 설치되어 있지 않습니다.`);
+              console.error(`  ${t('cli.notInstalled', { provider: provider.displayName })}`);
               process.exit(1);
             }
             if (!provider.getSessionToken?.()) {
-              console.error(`  ❌ ${provider.displayName} 인증 토큰을 찾을 수 없습니다. 로그인 상태를 확인하세요.`);
+              console.error(`  ${t('cli.noToken', { provider: provider.displayName })}`);
               process.exit(1);
             }
             const cfg3 = loadConfig();
             const sources = (cfg3.logSources || []).filter(s => s.provider !== value);
             sources.push({ provider: value });
             updateConfig({ logSources: sources });
-            showConfigUpdate('로그 소스 추가', `${provider.emoji} ${provider.displayName} (API 폴링)`);
+            showConfigUpdate(t('cli.logSources'), `${provider.emoji} ${provider.displayName} ${t('cli.apiPolling')}`);
           } else {
-            console.error(`  ❌ 형식: --add-source "프로바이더:경로"  예: "openai:/path/to/logs"`);
-            console.error(`     API 기반: --add-source cursor`);
-            console.error(`     지원 프로바이더: ${getProviderNames().join(', ')}`);
+            console.error(`  ${t('cli.sourceFormatError')}`);
+            console.error(`  ${t('cli.apiSourceHint')}`);
+            console.error(`  ${t('cli.providerHint', { providers: getProviderNames().join(', ') })}`);
             process.exit(1);
           }
           i += 2;
@@ -175,14 +184,14 @@ if (command === 'config') {
         const srcProvider = value.slice(0, colonIdx);
         const srcPath = value.slice(colonIdx + 1);
         if (!getProviderNames().includes(srcProvider)) {
-          console.error(`  ❌ 알 수 없는 프로바이더: ${srcProvider}. 지원: ${getProviderNames().join(', ')}`);
+          console.error(`  ${t('cli.unknownProvider', { provider: srcProvider, supported: getProviderNames().join(', ') })}`);
           process.exit(1);
         }
         const cfg3 = loadConfig();
         const sources = (cfg3.logSources || []).filter(s => !(s.provider === srcProvider && s.path === srcPath));
         sources.push({ provider: srcProvider, path: srcPath });
         updateConfig({ logSources: sources });
-        showConfigUpdate('로그 소스 추가', `${srcProvider}:${srcPath}`);
+        showConfigUpdate(t('cli.logSources'), `${srcProvider}:${srcPath}`);
         i += 2;
         break;
       }
@@ -198,12 +207,24 @@ if (command === 'config') {
           filtered2 = (cfg4.logSources || []).filter(s => s.provider !== value);
         }
         updateConfig({ logSources: filtered2 });
-        showConfigUpdate('로그 소스 삭제', value);
+        showConfigUpdate(t('cli.logSources'), value);
+        i += 2;
+        break;
+      }
+      case '--language': {
+        const lang = value?.toLowerCase();
+        if (lang !== 'en' && lang !== 'ko') {
+          console.error(`  ${t('cli.unknownLang', { lang: value })}`);
+          process.exit(1);
+        }
+        updateConfig({ language: lang });
+        setLocale(lang);
+        showConfigUpdate(t('cli.language'), lang);
         i += 2;
         break;
       }
       default:
-        console.error(`  ❌ 알 수 없는 옵션: ${key}`);
+        console.error(`  ${t('cli.unknownOption', { option: key })}`);
         process.exit(1);
     }
   }
@@ -223,7 +244,7 @@ if (command === 'config') {
 } else if (command === 'cli') {
   const { main } = await import('../dist/index.js');
   main().catch((err) => {
-    console.error('치명적 오류:', err.message);
+    console.error(`${t('cli.fatalError')} ${err.message}`);
     process.exit(1);
   });
 } else if (args.includes('--help') || args.includes('-h')) {
@@ -234,34 +255,35 @@ if (command === 'config') {
 
 function showHelp() {
   console.log(`
-  🪙 cost-cry — 당신의 API 비용을 감정적으로 체감시켜주는 도구
+  ${t('cli.title')}
 
-  사용법:
-    cost-cry                            오버레이 실행 (화면 위 플로팅 위젯)
-    cost-cry cli                        CLI 모드 (터미널에서 실시간 추적)
-    cost-cry config                     현재 설정 보기
-    cost-cry config [옵션]              설정 변경
-    cost-cry report                     주간 리포트
-    cost-cry report --monthly           월간 리포트
+  ${t('cli.usage')}
+    cost-cry                            ${t('cli.cmdOverlay')}
+    cost-cry cli                        ${t('cli.cmdCli')}
+    cost-cry config                     ${t('cli.cmdConfig')}
+    cost-cry config [options]           ${t('cli.cmdConfigEdit')}
+    cost-cry report                     ${t('cli.cmdReport')}
+    cost-cry report --monthly           ${t('cli.cmdReportMonthly')}
 
-  설정 옵션:
-    --daily-budget <금액>      일일 예산 설정 (USD). 해제: --daily-budget off
-    --monthly-budget <금액>    월간 예산 설정 (USD). 해제: --monthly-budget off
-    --nudge <on|off>           모델 절약 넛지 표시 여부
-    --unit <이름|auto>         환산 단위 고정 (예: 치킨). 자동: --unit auto
-    --add-unit "이름:가격:이모지:단위"  커스텀 환산 단위 추가
-    --remove-unit <이름>       커스텀 환산 단위 삭제
-    --currency <코드>          표시 통화 (USD, KRW, JPY, EUR, GBP, CNY)
-    --exchange-rate <숫자|auto> 환율 수동 고정. 자동: --exchange-rate auto
-    --add-source "프로바이더:경로"  로그 소스 추가 (openai, google)
-    --add-source cursor            Cursor IDE 사용량 추적 (API 폴링)
-    --remove-source <프로바이더>    로그 소스 삭제
+  ${t('cli.settingsTitle')}
+    --daily-budget <amount>    Daily budget (USD). Off: --daily-budget off
+    --monthly-budget <amount>  Monthly budget (USD). Off: --monthly-budget off
+    --nudge <on|off>           Savings nudge
+    --unit <name|auto>         Fixed equivalent unit. Auto: --unit auto
+    --add-unit "name:price:emoji:unit"  Add custom equivalent unit
+    --remove-unit <name>       Remove custom equivalent unit
+    --currency <code>          Display currency (USD, KRW, JPY, EUR, GBP, CNY)
+    --exchange-rate <num|auto> Fix exchange rate manually. Auto: --exchange-rate auto
+    --add-source "provider:path"  Add log source (openai, google)
+    --add-source cursor            Track Cursor IDE usage (API polling)
+    --remove-source <provider>    Remove log source
+    --language <en|ko>         Set language
   
-  예시:
+  ${t('cli.examplesTitle')}
     cost-cry config --daily-budget 10
-    cost-cry config --unit 치킨
     cost-cry config --currency KRW
     cost-cry config --add-source cursor
+    cost-cry config --language ko
   `);
 }
 
@@ -278,20 +300,25 @@ async function launchOverlay() {
   try {
     electronPath = require('electron');
   } catch {
-    console.error('❌ Electron이 설치되어 있지 않습니다.');
-    console.error('   npm install electron 후 다시 시도해주세요.');
+    console.error(t('cli.noElectron'));
+    console.error(t('cli.installElectron'));
     process.exit(1);
   }
 
   const appPath = path.join(__dirname, '..', 'electron');
 
-  const child = spawn(electronPath, [appPath], {
-    detached: true,
-    stdio: 'ignore',
-  });
+  try {
+    const child = spawn(electronPath, [appPath], {
+      detached: true,
+      stdio: 'ignore',
+    });
 
-  child.unref();
+    child.unref();
 
-  console.log('🪙 cost-cry 위젯이 실행되었습니다. (트레이 아이콘 확인)');
-  process.exit(0);
+    console.log(t('cli.widgetLaunched'));
+    process.exit(0);
+  } catch (err) {
+    console.error(`${t('cli.electronFail')} ${err.message}`);
+    process.exit(1);
+  }
 }

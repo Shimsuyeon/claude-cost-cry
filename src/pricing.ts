@@ -1,3 +1,4 @@
+import { t } from './i18n.js';
 import type { ModelPricing, ModelPattern, EquivalentItem } from './types.js';
 
 const MODEL_PRICING: Record<string, ModelPricing> = {
@@ -25,10 +26,14 @@ export function getModelLabel(modelName: string): string {
   return getPricing(modelName).label;
 }
 
-export const EQUIVALENTS: EquivalentItem[] = [
-  { name: '아이스 아메리카노', price: 4.5, emoji: '☕', unit: '잔' },
-  { name: '점심 한 끼', price: 8, emoji: '🍱', unit: '끼' },
-  { name: '치킨', price: 17, emoji: '🍗', unit: '마리' },
-  { name: '넷플릭스 한 달', price: 13, emoji: '📺', unit: '개월' },
-  { name: '스타벅스 프라푸치노', price: 6, emoji: '🥤', unit: '잔' },
-];
+export function getEquivalents(): EquivalentItem[] {
+  return [
+    { name: t('equiv.americano'), price: 4.5, emoji: '☕', unit: t('equiv.americano.unit') },
+    { name: t('equiv.lunch'), price: 8, emoji: '🍱', unit: t('equiv.lunch.unit') },
+    { name: t('equiv.chicken'), price: 17, emoji: '🍗', unit: t('equiv.chicken.unit') },
+    { name: t('equiv.netflix'), price: 13, emoji: '📺', unit: t('equiv.netflix.unit') },
+    { name: t('equiv.frappuccino'), price: 6, emoji: '🥤', unit: t('equiv.frappuccino.unit') },
+  ];
+}
+
+export { getEquivalents as EQUIVALENTS_FN };

@@ -15,6 +15,7 @@ const DEFAULTS: Config = {
   equivalentUnit: 'auto',
   customEquivalents: [],
   logSources: [],
+  language: 'en',
 };
 
 export function loadConfig(): Config {

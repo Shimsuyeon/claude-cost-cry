@@ -44,6 +44,7 @@ export interface Config {
   equivalentUnit: string;
   customEquivalents: EquivalentItem[];
   logSources: LogSourceConfig[];
+  language: string;
 }
 
 export interface LogSourceConfig {

@@ -4,6 +4,7 @@ import { calculateCost } from './calculator.js';
 import { loadConfig } from './config.js';
 import { buildLogSources } from './watcher.js';
 import { getProvider } from './providers/index.js';
+import { t } from './i18n.js';
 import type { DailyData, DailyStats } from './types.js';
 
 function toDateKey(timestamp: string): string {
@@ -12,8 +13,8 @@ function toDateKey(timestamp: string): string {
 }
 
 function getDayOfWeek(dateKey: string): string {
-  const days = ['일', '월', '화', '수', '목', '금', '토'];
-  return days[new Date(dateKey).getDay()];
+  const dayKeys = ['days.sun', 'days.mon', 'days.tue', 'days.wed', 'days.thu', 'days.fri', 'days.sat'];
+  return t(dayKeys[new Date(dateKey).getDay()]);
 }
 
 function parseLine(line: string): Record<string, unknown> | null {
@@ -83,7 +84,7 @@ export async function aggregateByDate(daysBack = 30): Promise<DailyData[]> {
           page++;
         }
       } catch {
-        // API 호출 실패 시 건너뜀
+        // skip on API failure
       }
       continue;
     }

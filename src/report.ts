@@ -3,6 +3,7 @@ import { formatCostShort, toEquivalent } from './calculator.js';
 import { aggregateByDate, computeStats } from './history.js';
 import { loadConfig } from './config.js';
 import { getProvider, getProviderEmoji } from './providers/index.js';
+import { t } from './i18n.js';
 import type { DailyData, DailyStats, ModelSummaryItem, SavingsSimulationItem } from './types.js';
 
 const BAR_MAX_WIDTH = 30;
@@ -24,7 +25,7 @@ export async function showWeeklyReport() {
   const dailyData = await aggregateByDate(7);
 
   if (dailyData.length === 0) {
-    console.log(chalk.gray('  데이터가 없습니다.'));
+    console.log(chalk.gray(`  ${t('report.noData')}`));
     return { dailyData: [], stats: null };
   }
 
@@ -32,7 +33,7 @@ export async function showWeeklyReport() {
   const maxCost = stats.maxDay?.totalCost || 1;
 
   console.log();
-  console.log(chalk.bold('  📊 주간 비용 리포트'));
+  console.log(chalk.bold(`  ${t('report.weeklyTitle')}`));
   console.log(chalk.gray('  ─'.repeat(28)));
   console.log();
 
@@ -59,7 +60,7 @@ export async function showMonthlyReport() {
   const dailyData = await aggregateByDate(30);
 
   if (dailyData.length === 0) {
-    console.log(chalk.gray('  데이터가 없습니다.'));
+    console.log(chalk.gray(`  ${t('report.noData')}`));
     return { dailyData: [], stats: null };
   }
 
@@ -67,7 +68,7 @@ export async function showMonthlyReport() {
   const maxCost = stats.maxDay?.totalCost || 1;
 
   console.log();
-  console.log(chalk.bold('  📊 월간 비용 리포트 (최근 30일)'));
+  console.log(chalk.bold(`  ${t('report.monthlyTitle')}`));
   console.log(chalk.gray('  ─'.repeat(28)));
   console.log();
 
@@ -93,18 +94,20 @@ export async function showMonthlyReport() {
 function printStats(stats: DailyStats): void {
   const config = loadConfig();
   const equiv = toEquivalent(stats.totalCost, config);
-  const equivStr = equiv ? ` (${equiv.emoji} ${equiv.name} ${equiv.count}${equiv.unit || '개'})` : '';
+  const defaultUnit = t('display.defaultUnit');
+  const equivStr = equiv ? ` (${equiv.emoji} ${equiv.name} ${equiv.count}${equiv.unit || defaultUnit})` : '';
+  const callsSuffix = t('report.callsSuffix');
 
   console.log();
-  console.log(`  💰 총 비용:     ${chalk.bold.yellow(formatCostShort(stats.totalCost))}${chalk.gray(equivStr)}`);
-  console.log(`  📈 일 평균:     ${chalk.cyan(formatCostShort(stats.avgDaily))}`);
-  console.log(`  🔥 최고 지출일: ${chalk.red(stats.maxDay!.date)} (${stats.maxDay!.day}) — ${formatCostShort(stats.maxDay!.totalCost)}`);
+  console.log(`  ${t('report.totalCost')}     ${chalk.bold.yellow(formatCostShort(stats.totalCost))}${chalk.gray(equivStr)}`);
+  console.log(`  ${t('report.dailyAvg')}     ${chalk.cyan(formatCostShort(stats.avgDaily))}`);
+  console.log(`  ${t('report.highestDay')} ${chalk.red(stats.maxDay!.date)} (${stats.maxDay!.day}) — ${formatCostShort(stats.maxDay!.totalCost)}`);
 
   if (stats.minDay && stats.minDay !== stats.maxDay) {
-    console.log(`  🌿 최저 지출일: ${chalk.green(stats.minDay.date)} (${stats.minDay.day}) — ${formatCostShort(stats.minDay.totalCost)}`);
+    console.log(`  ${t('report.lowestDay')} ${chalk.green(stats.minDay.date)} (${stats.minDay.day}) — ${formatCostShort(stats.minDay.totalCost)}`);
   }
 
-  console.log(`  📞 총 호출:     ${stats.totalCalls}건 (${stats.daysActive}일 활동)`);
+  console.log(`  ${t('report.totalCalls')}     ${stats.totalCalls}${callsSuffix} (${stats.daysActive} ${t('report.daysActive')})`);
   console.log();
 }
 
@@ -123,8 +126,9 @@ function printModelBreakdown(dailyData: DailyData[]): void {
 
   const savings = computeSavingsSimulation(summary);
   const maxCost = summary[0]?.cost || 1;
+  const callsSuffix = t('report.callsSuffix');
 
-  console.log(chalk.bold('  🏷️  모델별 비용'));
+  console.log(chalk.bold(`  ${t('report.modelBreakdown')}`));
   console.log();
 
   for (const m of summary) {
@@ -134,7 +138,7 @@ function printModelBreakdown(dailyData: DailyData[]): void {
     const pctStr = `(${String(m.pct).padStart(2)}%)`;
 
     console.log(
-      `  ${m.emoji} ${color(m.model.padEnd(18))} ${color(bar)} ${chalk.bold(formatCostShort(m.cost).padStart(8))} ${chalk.gray(pctStr)}  ${chalk.gray(m.calls + '건')}`,
+      `  ${m.emoji} ${color(m.model.padEnd(18))} ${color(bar)} ${chalk.bold(formatCostShort(m.cost).padStart(8))} ${chalk.gray(pctStr)}  ${chalk.gray(m.calls + callsSuffix)}`,
     );
   }
 
@@ -142,7 +146,7 @@ function printModelBreakdown(dailyData: DailyData[]): void {
     console.log();
     for (const s of savings.slice(0, 2)) {
       console.log(
-        chalk.gray(`  💡 ${s.from} → ${s.to} 였다면 ${chalk.yellow(formatCostShort(s.saving))} 절약 가능`),
+        chalk.gray(`  ${t('report.savingHint', { from: s.from, to: s.to, saving: chalk.yellow(formatCostShort(s.saving)) })}`),
       );
     }
   }

@@ -4,6 +4,7 @@ import { showBanner, showTodaySummary, showCostUpdate, showBudgetAlert, showShut
 import { scanToday, startWatching, getClaudeProjectsDir, buildLogSources } from './watcher.js';
 import { getExchangeRate } from './exchange.js';
 import { getModelLabel, getProviderEmoji, getProviderDisplayName, getProvider } from './providers/index.js';
+import { t } from './i18n.js';
 import type { Usage, TopRequest, BudgetStatus } from './types.js';
 
 function truncatePrompt(text: string | null | undefined, maxLen = 30): string | null {
@@ -15,8 +16,9 @@ function truncatePrompt(text: string | null | undefined, maxLen = 30): string | 
 
 function recordRequest(topRequests: TopRequest[], usage: Usage, cost: number): void {
   const totalInput = usage.inputTokens + usage.cacheCreationTokens + usage.cacheReadTokens;
+  const locale = (loadConfig().language || 'en') === 'ko' ? 'ko-KR' : 'en-US';
   const time = usage.timestamp
-    ? new Date(usage.timestamp).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })
+    ? new Date(usage.timestamp).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })
     : '';
 
   topRequests.push({
@@ -42,9 +44,9 @@ export async function main(): Promise<void> {
 
   if (sources.length === 0) {
     const claudeDir = getClaudeProjectsDir();
-    showError(`로그 디렉토리를 찾을 수 없습니다: ${claudeDir}`);
-    showInfo('Claude Code를 먼저 사용하거나, config에 로그 소스를 추가하세요.');
-    showInfo('  claude-cost-cry config --add-source openai:/path/to/logs');
+    showError(t('index.noLogDir', { path: claudeDir }));
+    showInfo(t('index.addSource'));
+    showInfo('  cost-cry config --add-source openai:/path/to/logs');
     process.exit(1);
   }
 
@@ -52,14 +54,14 @@ export async function main(): Promise<void> {
   const sourceInfo = providerNames
     .map(p => `${getProviderEmoji(p)} ${getProviderDisplayName(p)}`)
     .join(' + ');
-  showInfo(`추적 중: ${sourceInfo}`);
+  showInfo(t('index.tracking', { sources: sourceInfo }));
 
   const cursorProvider = getProvider('cursor');
   if (cursorProvider?.isAvailable?.() && !providerNames.includes('cursor')) {
-    showInfo('💡 Cursor IDE가 감지됨! 추적하려면: claude-cost-cry config --add-source cursor');
+    showInfo(t('index.cursorHint'));
   }
 
-  showInfo('오늘의 사용량을 스캔하는 중...');
+  showInfo(t('index.scanning'));
 
   const exchange = await getExchangeRate(config);
 
@@ -114,7 +116,7 @@ export async function main(): Promise<void> {
   }, config);
 
   if (!watcher) {
-    showError('파일 감시를 시작할 수 없습니다.');
+    showError(t('index.watchFail'));
     process.exit(1);
   }
 

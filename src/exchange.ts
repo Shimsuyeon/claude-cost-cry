@@ -1,6 +1,7 @@
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
+import { t, getLocale } from './i18n.js';
 import type { Config, ExchangeInfo } from './types.js';
 
 const CACHE_DIR = join(homedir(), '.claude-cost-cry');
@@ -41,6 +42,10 @@ async function fetchRates(): Promise<Record<string, number> | null> {
   }
 }
 
+function dateLocale(): string {
+  return getLocale() === 'ko' ? 'ko-KR' : 'en-US';
+}
+
 export async function getExchangeRate(config: Config): Promise<ExchangeInfo> {
   const currency = config?.currency || 'USD';
   if (currency === 'USD') return { rate: 1, symbol: '$', currency: 'USD', source: 'base' };
@@ -63,7 +68,7 @@ export async function getExchangeRate(config: Config): Promise<ExchangeInfo> {
       symbol: CURRENCY_SYMBOLS[currency] || currency,
       currency,
       source: 'cache',
-      updatedAt: new Date(cache.timestamp).toLocaleDateString('ko-KR'),
+      updatedAt: new Date(cache.timestamp).toLocaleDateString(dateLocale()),
     };
   }
 
@@ -76,7 +81,7 @@ export async function getExchangeRate(config: Config): Promise<ExchangeInfo> {
       symbol: CURRENCY_SYMBOLS[currency] || currency,
       currency,
       source: 'api',
-      updatedAt: new Date(now).toLocaleDateString('ko-KR'),
+      updatedAt: new Date(now).toLocaleDateString(dateLocale()),
     };
   }
 
@@ -86,7 +91,7 @@ export async function getExchangeRate(config: Config): Promise<ExchangeInfo> {
       symbol: CURRENCY_SYMBOLS[currency] || currency,
       currency,
       source: 'stale-cache',
-      updatedAt: cache.timestamp ? new Date(cache.timestamp).toLocaleDateString('ko-KR') : '알 수 없음',
+      updatedAt: cache.timestamp ? new Date(cache.timestamp).toLocaleDateString(dateLocale()) : t('exchange.unknown'),
     };
   }
 

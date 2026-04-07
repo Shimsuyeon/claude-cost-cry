@@ -249,7 +249,7 @@
   }
 
   /* ── Settings panel ── */
-  .settings-panel.open { max-height: 280px; }
+  .settings-panel.open { max-height: 320px; }
 
   .setting-row {
     display: flex;
@@ -708,10 +708,10 @@
 
 <div class="widget tier-peace" id="widget">
   <div class="toolbar">
-    <div class="tool-btn" id="chartBtn" title="일별 비용">📊</div>
-    <div class="tool-btn" id="modelsBtn" title="모델별 비용">🏷️</div>
-    <div class="tool-btn" id="topBtn" title="비싼 요청 TOP 3">🏆</div>
-    <div class="tool-btn" id="gearBtn" title="설정">⚙</div>
+    <div class="tool-btn" id="chartBtn" title="">📊</div>
+    <div class="tool-btn" id="modelsBtn" title="">🏷️</div>
+    <div class="tool-btn" id="topBtn" title="">🏆</div>
+    <div class="tool-btn" id="gearBtn" title="">⚙</div>
   </div>
 
   <div class="main-row">
@@ -721,7 +721,7 @@
         <span class="cost" id="cost">$0.00</span>
         <span class="delta" id="delta"></span>
       </div>
-      <div class="equiv" id="equiv">지갑이 평화롭습니다</div>
+      <div class="equiv" id="equiv"></div>
       <div class="calls" id="calls"></div>
     </div>
   </div>
@@ -741,21 +741,21 @@
   <!-- Chart Panel -->
   <div class="panel chart-panel" id="chartPanel">
     <div class="panel-divider"></div>
-    <div class="chart-panel-title">📊 일별 비용 (최근 7일)</div>
+    <div class="chart-panel-title" id="chartTitle"></div>
     <div id="chartBody"></div>
   </div>
 
   <!-- Models Panel -->
   <div class="panel models-panel" id="modelsPanel">
     <div class="panel-divider"></div>
-    <div class="chart-panel-title">🏷️ 모델별 비용 비교</div>
+    <div class="chart-panel-title" id="modelsTitle"></div>
     <div id="modelsBody"></div>
   </div>
 
   <!-- TOP 3 Panel -->
   <div class="panel top-panel" id="topPanel">
     <div class="panel-divider"></div>
-    <div class="top-panel-title">🏆 오늘의 가장 비싼 요청</div>
+    <div class="top-panel-title" id="topTitle"></div>
     <div class="top-summary" id="topSummary"></div>
     <div id="topList"></div>
   </div>
@@ -770,26 +770,26 @@
     </div>
 
     <div class="setting-row">
-      <span class="setting-label">통화</span>
+      <span class="setting-label" id="lblCurrency"></span>
       <select class="setting-select" id="currencySelect" style="width:80px">
         <option value="USD">$ USD</option>
       </select>
     </div>
 
     <div class="setting-row">
-      <span class="setting-label">일일 예산</span>
-      <input type="text" class="setting-input" id="budgetInput" placeholder="미설정">
+      <span class="setting-label" id="lblBudget"></span>
+      <input type="text" class="setting-input" id="budgetInput" placeholder="">
     </div>
 
     <div class="setting-row">
-      <span class="setting-label">환산 단위</span>
+      <span class="setting-label" id="lblEquiv"></span>
       <select class="setting-select" id="unitSelect">
-        <option value="auto">🔄 자동</option>
+        <option value="auto"></option>
       </select>
     </div>
 
     <div class="setting-row">
-      <span class="setting-label">절약 넛지</span>
+      <span class="setting-label" id="lblNudge"></span>
       <label class="toggle">
         <input type="checkbox" id="nudgeToggle" checked>
         <div class="toggle-track"></div>
@@ -797,11 +797,19 @@
       </label>
     </div>
 
-    <button class="save-btn" id="saveBtn">저장</button>
+    <div class="setting-row">
+      <span class="setting-label" id="lblLang"></span>
+      <select class="setting-select" id="langSelect" style="width:80px">
+        <option value="en">English</option>
+        <option value="ko">한국어</option>
+      </select>
+    </div>
+
+    <button class="save-btn" id="saveBtn"></button>
 
     <div class="version-section" id="versionSection">
       <span class="version-label" id="versionLabel">v...</span>
-      <button class="update-btn" id="updateBtn">업데이트 확인</button>
+      <button class="update-btn" id="updateBtn"></button>
     </div>
   </div>
 </div>
@@ -838,6 +846,7 @@
   const exchangeInfoEl = document.getElementById('exchangeInfo');
   const exchangeRateDisplay = document.getElementById('exchangeRateDisplay');
   const exchangeSource = document.getElementById('exchangeSource');
+  const langSelect = document.getElementById('langSelect');
 
   const versionLabel = document.getElementById('versionLabel');
   const updateBtn = document.getElementById('updateBtn');
@@ -845,10 +854,43 @@
   let activePanel = null;
   let latestData = {};
   let currentExchange = null;
+  let L = {};
+
+  function loc(key, params) {
+    let text = L[key] || key;
+    if (params) {
+      for (const [k, v] of Object.entries(params)) {
+        text = text.replace(new RegExp(`\\{${k}\\}`, 'g'), String(v));
+      }
+    }
+    return text;
+  }
+
+  function applyStaticLabels() {
+    chartBtn.title = loc('tooltip.chart');
+    modelsBtn.title = loc('tooltip.models');
+    topBtn.title = loc('tooltip.top');
+    gearBtn.title = loc('tooltip.settings');
+
+    document.getElementById('chartTitle').textContent = loc('overlay.chartTitle');
+    document.getElementById('modelsTitle').textContent = loc('overlay.modelsTitle');
+    document.getElementById('topTitle').textContent = loc('overlay.topTitle');
+
+    document.getElementById('lblCurrency').textContent = loc('settings.currency');
+    document.getElementById('lblBudget').textContent = loc('settings.dailyBudget');
+    budgetInput.placeholder = loc('settings.budgetPlaceholder');
+    document.getElementById('lblEquiv').textContent = loc('settings.equivUnit');
+    document.getElementById('lblNudge').textContent = loc('settings.nudge');
+    document.getElementById('lblLang').textContent = loc('settings.language');
+    saveBtn.textContent = loc('settings.save');
+    updateBtn.textContent = loc('settings.checkUpdate');
+
+    equivEl.textContent = loc('overlay.walletPeace');
+  }
 
   function formatTokens(n) {
-    if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M';
-    if (n >= 1_000) return (n / 1_000).toFixed(1) + 'K';
+    if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+    if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
     return String(n);
   }
 
@@ -873,12 +915,6 @@
 
   function escapeHtml(str) {
     return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-  }
-
-  function formatTokens(n) {
-    if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
-    if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
-    return String(n);
   }
 
   // ── Panel toggle ──
@@ -928,8 +964,9 @@
     const cfg = await window.bridge.getConfig();
     budgetInput.value = cfg.dailyBudget || '';
     nudgeToggle.checked = cfg.showNudge !== false;
+    langSelect.value = cfg.language || 'en';
 
-    unitSelect.innerHTML = '<option value="auto">🔄 자동</option>';
+    unitSelect.innerHTML = `<option value="auto">${loc('settings.autoUnit')}</option>`;
     if (cfg.allUnits) {
       for (const u of cfg.allUnits) {
         const opt = document.createElement('option');
@@ -954,22 +991,25 @@
     if (cfg.currentExchange && cfg.currentExchange.currency !== 'USD') {
       exchangeInfoEl.style.display = 'flex';
       exchangeRateDisplay.textContent = `1 USD = ${cfg.currentExchange.rate.toLocaleString()} ${cfg.currentExchange.currency}`;
-      const srcMap = { api: '실시간', cache: '캐시', 'stale-cache': '오래된 캐시', manual: '수동 설정' };
+      const srcMap = {
+        api: loc('overlay.exchange.api'), cache: loc('overlay.exchange.cache'),
+        'stale-cache': loc('overlay.exchange.staleCache'), manual: loc('overlay.exchange.manual')
+      };
       exchangeSource.textContent = `${srcMap[cfg.currentExchange.source] || ''} ${cfg.currentExchange.updatedAt || ''}`.trim();
     } else {
       exchangeInfoEl.style.display = 'none';
     }
 
-    saveBtn.textContent = '저장';
+    saveBtn.textContent = loc('settings.save');
     saveBtn.classList.remove('saved');
 
     window.bridge.checkUpdate().then(info => {
       versionLabel.textContent = `v${info.current}`;
       if (info.updateAvailable) {
-        updateBtn.textContent = `v${info.latest} 업데이트 가능`;
+        updateBtn.textContent = loc('settings.updateAvailable', { version: info.latest });
         updateBtn.classList.add('has-update');
       } else {
-        updateBtn.textContent = '최신 버전';
+        updateBtn.textContent = loc('settings.latestVersion');
         updateBtn.classList.remove('has-update');
       }
     }).catch(() => {
@@ -1012,13 +1052,13 @@
 
     if (count > 0) {
       const avg = total / count;
-      topSummary.innerHTML = `📋 오늘 ${count}건 · 평균 ${formatCost(avg)}/건`;
+      topSummary.innerHTML = loc('overlay.topSummary', { count, avg: formatCost(avg) });
     } else {
       topSummary.innerHTML = '';
     }
 
     if (items.length === 0) {
-      topList.innerHTML = '<div class="top-empty">아직 요청이 없습니다</div>';
+      topList.innerHTML = `<div class="top-empty">${loc('overlay.noRequests')}</div>`;
       return;
     }
 
@@ -1032,7 +1072,7 @@
       const pEmoji = req.providerEmoji ? `<span style="font-size:10px">${req.providerEmoji}</span> ` : '';
       const hasFullPrompt = req.fullPrompt && req.fullPrompt.length > 30;
       const promptHtml = req.prompt
-        ? `<div class="top-prompt" data-idx="${i}" ${hasFullPrompt ? 'title="클릭하면 전체 보기"' : ''}>💬 ${escapeHtml(req.prompt)}</div>`
+        ? `<div class="top-prompt" data-idx="${i}" ${hasFullPrompt ? `title="${loc('overlay.clickToExpand')}"` : ''}>💬 ${escapeHtml(req.prompt)}</div>`
         : '';
       const tokIn = req.inputTokens || 0;
       const tokOut = req.outputTokens || 0;
@@ -1065,15 +1105,16 @@
   // ── Chart ──
 
   async function loadChart(preloaded) {
-    if (!preloaded) chartBody.innerHTML = '<div class="top-empty">로딩 중...</div>';
+    if (!preloaded) chartBody.innerHTML = `<div class="top-empty">${loc('overlay.loading')}</div>`;
     const report = preloaded || await window.bridge.getReport(7);
     const days = report.dailyData || [];
 
     if (days.length === 0) {
-      chartBody.innerHTML = '<div class="top-empty">데이터가 없습니다</div>';
+      chartBody.innerHTML = `<div class="top-empty">${loc('overlay.noData')}</div>`;
       return;
     }
 
+    const callsSuffix = loc('overlay.callsSuffix');
     const maxCost = Math.max(...days.map(d => d.cost), 0.01);
 
     let html = days.slice(-7).reverse().map(d => {
@@ -1086,7 +1127,7 @@
             <div class="chart-bar-fill ${barClass}" style="width:${pct}%"></div>
           </div>
           <span class="daily-cost">${d.cost > 0 ? formatCost(d.cost) : '·'}</span>
-          <span class="daily-calls">${d.calls || 0}건</span>
+          <span class="daily-calls">${d.calls || 0}${callsSuffix}</span>
         </div>
       `;
     }).join('');
@@ -1095,16 +1136,16 @@
       html += `
         <div class="chart-stats">
           <div class="chart-stat-row">
-            <span class="chart-stat-label">총 비용</span>
+            <span class="chart-stat-label">${loc('overlay.totalCost')}</span>
             <span class="chart-stat-value">${formatCost(report.stats.totalCost)}</span>
           </div>
           <div class="chart-stat-row">
-            <span class="chart-stat-label">일 평균</span>
+            <span class="chart-stat-label">${loc('overlay.dailyAvg')}</span>
             <span class="chart-stat-value">${formatCost(report.stats.avgDaily)}</span>
           </div>
           <div class="chart-stat-row">
-            <span class="chart-stat-label">총 호출</span>
-            <span class="chart-stat-value">${report.stats.totalCalls}건</span>
+            <span class="chart-stat-label">${loc('overlay.totalCalls')}</span>
+            <span class="chart-stat-value">${report.stats.totalCalls}${callsSuffix}</span>
           </div>
         </div>
       `;
@@ -1116,12 +1157,12 @@
   // ── Models ──
 
   async function loadModels(preloaded) {
-    if (!preloaded) modelsBody.innerHTML = '<div class="top-empty">로딩 중...</div>';
+    if (!preloaded) modelsBody.innerHTML = `<div class="top-empty">${loc('overlay.loading')}</div>`;
     const report = preloaded || await window.bridge.getReport(7);
     const models = report.modelSummary || [];
 
     if (models.length === 0) {
-      modelsBody.innerHTML = '<div class="top-empty">데이터가 없습니다</div>';
+      modelsBody.innerHTML = `<div class="top-empty">${loc('overlay.noData')}</div>`;
       return;
     }
 
@@ -1148,7 +1189,7 @@
     if (savings.length > 0) {
       html += '<div class="model-saving-tip">';
       for (const s of savings.slice(0, 2)) {
-        html += `💡 ${s.from} → ${s.to} 였다면 ${formatCost(s.saving)} 절약<br>`;
+        html += `${loc('overlay.savingHint', { from: s.from, to: s.to, saving: formatCost(s.saving) })}<br>`;
       }
       html += '</div>';
     }
@@ -1167,33 +1208,33 @@
 
   updateBtn.addEventListener('click', async () => {
     updateBtn.classList.add('checking');
-    updateBtn.textContent = '확인 중...';
+    updateBtn.textContent = loc('settings.checking');
 
     try {
       const info = await window.bridge.checkUpdate();
       versionLabel.textContent = `v${info.current}`;
 
       if (info.updateAvailable) {
-        updateBtn.textContent = `v${info.latest} 업데이트 가능`;
+        updateBtn.textContent = loc('settings.updateAvailable', { version: info.latest });
         updateBtn.classList.remove('checking');
         updateBtn.classList.add('has-update');
 
         updateBtn.onclick = () => {
           navigator.clipboard.writeText('npm update -g claude-cost-cry');
-          updateBtn.textContent = '✓ 명령어 복사됨';
+          updateBtn.textContent = loc('settings.cmdCopied');
           setTimeout(() => {
-            updateBtn.textContent = `v${info.latest} 업데이트 가능`;
+            updateBtn.textContent = loc('settings.updateAvailable', { version: info.latest });
           }, 2000);
         };
       } else {
-        updateBtn.textContent = '✓ 최신 버전';
+        updateBtn.textContent = loc('settings.latestVersion');
         updateBtn.classList.remove('checking', 'has-update');
-        setTimeout(() => { updateBtn.textContent = '업데이트 확인'; }, 2000);
+        setTimeout(() => { updateBtn.textContent = loc('settings.checkUpdate'); }, 2000);
       }
     } catch {
-      updateBtn.textContent = '확인 실패';
+      updateBtn.textContent = loc('settings.checkFailed');
       updateBtn.classList.remove('checking');
-      setTimeout(() => { updateBtn.textContent = '업데이트 확인'; }, 2000);
+      setTimeout(() => { updateBtn.textContent = loc('settings.checkUpdate'); }, 2000);
     }
   });
 
@@ -1206,6 +1247,7 @@
       showNudge: nudgeToggle.checked,
       equivalentUnit: unitSelect.value,
       currency: currencySelect.value,
+      language: langSelect.value,
     };
 
     if (updates.dailyBudget !== null && isNaN(updates.dailyBudget)) {
@@ -1216,10 +1258,10 @@
 
     await window.bridge.saveConfig(updates);
 
-    saveBtn.textContent = '✓ 저장됨';
+    saveBtn.textContent = loc('settings.saved');
     saveBtn.classList.add('saved');
     setTimeout(() => {
-      saveBtn.textContent = '저장';
+      saveBtn.textContent = loc('settings.save');
       saveBtn.classList.remove('saved');
     }, 1500);
   });
@@ -1229,6 +1271,11 @@
   function updateDisplay(data) {
     latestData = data;
     if (data.exchange) currentExchange = data.exchange;
+
+    if (data.locale && data.locale !== L) {
+      L = data.locale;
+      applyStaticLabels();
+    }
 
     widget.className = 'widget';
     if (data.tier) widget.classList.add(`tier-${data.tier.level}`);
@@ -1241,12 +1288,13 @@
     if (data.tier) emojiEl.textContent = data.tier.emoji;
     costEl.textContent = formatCost(data.totalCost);
 
+    const defaultUnit = loc('display.defaultUnit');
     if (data.equivalent) {
-      equivEl.textContent = `${data.equivalent.emoji} ${data.equivalent.name} ${data.equivalent.count}${data.equivalent.unit || '개'}`;
+      equivEl.textContent = `${data.equivalent.emoji} ${data.equivalent.name} ${data.equivalent.count}${data.equivalent.unit || defaultUnit}`;
     } else if (data.totalCost === 0) {
-      equivEl.textContent = '지갑이 평화롭습니다';
+      equivEl.textContent = loc('overlay.walletPeace');
     } else {
-      equivEl.textContent = '아직은 괜찮아...';
+      equivEl.textContent = loc('overlay.stillOk');
     }
 
     if (data.callCount > 0) {
@@ -1258,7 +1306,7 @@
               return `${meta[p] || ''}${formatCost(c)}`;
             }).join(' ') + ')'
         : '';
-      callsEl.textContent = `오늘 ${data.callCount}건${providerBreakdown}`;
+      callsEl.textContent = loc('overlay.todayCalls', { count: data.callCount }) + providerBreakdown;
     }
 
     if (data.budget) {
@@ -1301,7 +1349,7 @@
     }
 
     if (data.nudge) {
-      nudgeEl.textContent = `💡 ${data.nudge.model}로 했으면 ${formatCost(data.nudge.saving)} 절약`;
+      nudgeEl.textContent = loc('overlay.nudge', { model: data.nudge.model, saving: formatCost(data.nudge.saving) });
       nudgeEl.classList.remove('show');
       void nudgeEl.offsetWidth;
       nudgeEl.classList.add('show');

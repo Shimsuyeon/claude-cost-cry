@@ -3,6 +3,7 @@ import { formatCostShort, formatTokenCount, toEquivalent, getSavingsNudge } from
 import { getMessage, getStartupMood } from './messages.js';
 import { formatLocalCost } from './exchange.js';
 import { getModelLabel as getProviderModelLabel, getProviderEmoji, getProviderDisplayName } from './providers/index.js';
+import { t } from './i18n.js';
 import type { Usage, Config, ExchangeInfo, BudgetStatus, TopRequest } from './types.js';
 
 const VERSION = '0.3.0';
@@ -27,7 +28,7 @@ function providerTag(providerName?: string): string {
 export function showBanner(): void {
   console.log();
   console.log(chalk.bold(`  🪙 claude-cost-cry v${VERSION}`));
-  console.log(chalk.gray('  당신의 API 비용을 감정적으로 체감시켜드립니다'));
+  console.log(chalk.gray(`  ${t('display.tagline')}`));
   console.log();
 }
 
@@ -41,15 +42,16 @@ export function showTodaySummary(
 ): void {
   const mood = getStartupMood(totalCost);
   const equiv = toEquivalent(totalCost, config);
+  const defaultUnit = t('display.defaultUnit');
   const equivText = equiv
-    ? chalk.gray(` (${equiv.emoji} ${equiv.name} ${equiv.count}${equiv.unit || '개'})`)
+    ? chalk.gray(` (${equiv.emoji} ${equiv.name} ${equiv.count}${equiv.unit || defaultUnit})`)
     : '';
 
   console.log(
-    `  📊 오늘 누적: ${chalk.bold.yellow(fc(totalCost, exchange))}${equivText}`
+    `  ${t('display.todayTotal')} ${chalk.bold.yellow(fc(totalCost, exchange))}${equivText}`
   );
   if (callCount > 0) {
-    console.log(chalk.gray(`     API 호출 ${callCount}건`));
+    console.log(chalk.gray(`     ${t('display.apiCalls', { count: callCount })}`));
   }
 
   if (costByProvider && Object.keys(costByProvider).length > 1) {
@@ -63,7 +65,7 @@ export function showTodaySummary(
   console.log(chalk.gray(`     ${mood}`));
 
   if (exchange && exchange.currency !== 'USD') {
-    const src = exchange.source === 'manual' ? '수동' : exchange.updatedAt || '';
+    const src = exchange.source === 'manual' ? t('display.exchangeManual') : exchange.updatedAt || '';
     console.log(chalk.gray(`     💱 1 USD = ${exchange.rate.toLocaleString()} ${exchange.currency} (${src})`));
   }
 
@@ -74,7 +76,7 @@ export function showTodaySummary(
 
   console.log();
   console.log(DIVIDER);
-  console.log(chalk.gray('  감시 중... (Ctrl+C로 종료)'));
+  console.log(chalk.gray(`  ${t('display.watching')}`));
   console.log(DIVIDER);
   console.log();
 }
@@ -95,15 +97,15 @@ export function showBudgetBar(totalCost: number, budgetStatus: BudgetStatus, exc
   const bar = barColor('█'.repeat(filled)) + chalk.gray('░'.repeat(empty));
   const pct = Math.round(ratio * 100);
 
-  console.log(`  ${statusIcon} 예산: ${bar} ${pct}%`);
-  console.log(chalk.gray(`     ${fc(totalCost, exchange)} / ${fc(budget!, exchange)} (잔여: ${fc(remaining!, exchange)})`));
+  console.log(`  ${statusIcon} ${t('display.budget')} ${bar} ${pct}%`);
+  console.log(chalk.gray(`     ${fc(totalCost, exchange)} / ${fc(budget!, exchange)} (${t('display.budgetRemaining')} ${fc(remaining!, exchange)})`));
 
   if (status === 'exceeded') {
-    console.log(chalk.red.bold(`     🚫 일일 예산을 초과했습니다!`));
+    console.log(chalk.red.bold(`     ${t('display.budgetExceeded')}`));
   } else if (status === 'danger') {
-    console.log(chalk.red(`     ⚠️  예산의 90%를 사용했습니다!`));
+    console.log(chalk.red(`     ${t('display.budget90')}`));
   } else if (status === 'warning') {
-    console.log(chalk.yellow(`     💡 예산의 70%를 사용했습니다.`));
+    console.log(chalk.yellow(`     ${t('display.budget70')}`));
   }
 }
 
@@ -138,18 +140,19 @@ export function showCostUpdate(usage: Usage, cost: number, totalCost: number, co
   const totalStr = chalk.bold.yellow(fc(totalCost, exchange));
 
   const equiv = toEquivalent(totalCost, config);
+  const defaultUnit = t('display.defaultUnit');
   const equivStr = equiv
-    ? chalk.gray(` ${equiv.emoji} ${equiv.count}${equiv.unit || '개'}`)
+    ? chalk.gray(` ${equiv.emoji} ${equiv.count}${equiv.unit || defaultUnit}`)
     : '';
 
   console.log(`  ${timeStr} ${modelStr}  ${tokenInfo}`);
-  console.log(`  ${emoji} ${costDelta}  →  누적: ${totalStr}${equivStr}`);
+  console.log(`  ${emoji} ${costDelta}  →  ${t('display.cumulative')} ${totalStr}${equivStr}`);
   console.log(chalk.italic.gray(`     "${message}"`));
 
   if (config?.showNudge && cost > 0.01) {
     const nudge = getSavingsNudge(usage, cost);
     if (nudge && nudge.saving > 0.005) {
-      console.log(chalk.cyan(`     💡 ${nudge.model}로 했으면 ${fc(nudge.cost, exchange)} (${fc(nudge.saving, exchange)} 절약)`));
+      console.log(chalk.cyan(`     ${t('display.nudge', { model: nudge.model, cost: fc(nudge.cost, exchange), saving: fc(nudge.saving, exchange) })}`));
     }
   }
 
@@ -159,10 +162,10 @@ export function showCostUpdate(usage: Usage, cost: number, totalCost: number, co
 export function showBudgetAlert(budgetStatus: BudgetStatus, exchange: ExchangeInfo | null): void {
   const { status } = budgetStatus;
   if (status === 'exceeded') {
-    console.log(chalk.bgRed.white.bold('  🚫 일일 예산 초과! 🚫  '));
+    console.log(chalk.bgRed.white.bold(`  ${t('display.budgetExceededBanner')}  `));
     console.log();
   } else if (status === 'danger') {
-    console.log(chalk.red(`  🔴 예산 90% 도달 — 남은 예산: ${fc(budgetStatus.remaining!, exchange)}`));
+    console.log(chalk.red(`  ${t('display.budget90Alert', { remaining: fc(budgetStatus.remaining!, exchange) })}`));
     console.log();
   }
 }
@@ -171,7 +174,7 @@ export function showTopExpensive(topRequests: TopRequest[], exchange: ExchangeIn
   if (!topRequests || topRequests.length === 0) return;
 
   console.log();
-  console.log(`  🏆 ${chalk.bold('오늘의 가장 비싼 요청 TOP 3')}`);
+  console.log(`  🏆 ${chalk.bold(t('display.topExpensive'))}`);
   console.log();
 
   topRequests.forEach((req, i) => {
@@ -206,12 +209,13 @@ export function showShutdown(
   console.log(DIVIDER);
 
   const equiv = toEquivalent(sessionCost, config);
+  const defaultUnit = t('display.defaultUnit');
   const equivText = equiv
-    ? ` (${equiv.emoji} ${equiv.name} ${equiv.count}${equiv.unit || '개'})`
+    ? ` (${equiv.emoji} ${equiv.name} ${equiv.count}${equiv.unit || defaultUnit})`
     : '';
 
-  console.log(`  📋 이번 세션 비용: ${chalk.bold.yellow(fc(sessionCost, exchange))}${equivText}`);
-  console.log(`  📊 오늘 총 비용: ${chalk.bold.yellow(fc(totalCost, exchange))}`);
+  console.log(`  ${t('display.sessionCost')} ${chalk.bold.yellow(fc(sessionCost, exchange))}${equivText}`);
+  console.log(`  ${t('display.todayCost')} ${chalk.bold.yellow(fc(totalCost, exchange))}`);
 
   if (costByProvider && Object.keys(costByProvider).length > 1) {
     const breakdown = Object.entries(costByProvider)
@@ -222,13 +226,13 @@ export function showShutdown(
   }
 
   if (savingsTotal > 0.01) {
-    console.log(chalk.cyan(`  💡 절약 가능했던 금액: ${fc(savingsTotal, exchange)} (최저가 모델 기준)`));
+    console.log(chalk.cyan(`  ${t('display.potentialSavings', { amount: fc(savingsTotal, exchange) })}`));
   }
 
   showTopExpensive(topRequests, exchange);
 
   console.log();
-  console.log(chalk.gray('  다음에 또 울러 오세요... 👋'));
+  console.log(chalk.gray(`  ${t('display.goodbye')}`));
   console.log(DIVIDER);
   console.log();
 }

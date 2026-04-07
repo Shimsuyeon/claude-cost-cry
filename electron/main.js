@@ -14,6 +14,8 @@ let topRequests = [];
 let exchangeInfo = null;
 let costByProvider = {};
 let _toEquivalent = null;
+let _t = null;
+let _localeStrings = null;
 
 const WIDGET_WIDTH = 280;
 const WIDGET_HEIGHT = 140;
@@ -68,8 +70,9 @@ function truncatePrompt(text, maxLen = 30) {
 
 function recordRequest(usage, cost) {
   const totalInput = (usage.inputTokens || 0) + (usage.cacheCreationTokens || 0) + (usage.cacheReadTokens || 0);
+  const locale = (config.language || 'en') === 'ko' ? 'ko-KR' : 'en-US';
   const time = usage.timestamp
-    ? new Date(usage.timestamp).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })
+    ? new Date(usage.timestamp).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })
     : '';
 
   const provider = usage.provider || 'claude';
@@ -122,6 +125,11 @@ function getModelLabelLocal(usage) {
   return model.split('/').pop() || 'Unknown';
 }
 
+function tt(key, params) {
+  if (_t) return _t(key, params);
+  return key;
+}
+
 function buildPayload(deltaCost, usage) {
   const budgetStatus = config.dailyBudget
     ? getBudgetStatus(totalCost, config.dailyBudget)
@@ -140,6 +148,7 @@ function buildPayload(deltaCost, usage) {
     topRequests,
     exchange: exchangeInfo,
     costByProvider,
+    locale: _localeStrings,
   };
 }
 
@@ -192,12 +201,12 @@ function toggleOverlay() {
 }
 
 function getTier(cost) {
-  if (cost < 1) return { emoji: '🪙', level: 'peace', label: '평화' };
-  if (cost < 5) return { emoji: '💸', level: 'uneasy', label: '불안' };
-  if (cost < 10) return { emoji: '🔥', level: 'worry', label: '걱정' };
-  if (cost < 30) return { emoji: '🚨', level: 'alert', label: '경고' };
-  if (cost < 100) return { emoji: '💀', level: 'danger', label: '공포' };
-  return { emoji: '⚰️', level: 'funeral', label: '장례식' };
+  if (cost < 1) return { emoji: '🪙', level: 'peace', label: tt('tier.peace') };
+  if (cost < 5) return { emoji: '💸', level: 'uneasy', label: tt('tier.uneasy') };
+  if (cost < 10) return { emoji: '🔥', level: 'worry', label: tt('tier.worry') };
+  if (cost < 30) return { emoji: '🚨', level: 'alert', label: tt('tier.alert') };
+  if (cost < 100) return { emoji: '💀', level: 'danger', label: tt('tier.danger') };
+  return { emoji: '⚰️', level: 'funeral', label: tt('tier.funeral') };
 }
 
 function getEquivalent(cost) {
@@ -236,7 +245,7 @@ function updateTrayTitle() {
   if (!tray) return;
   const costStr = formatCostForTray(totalCost);
   tray.setTitle(` ${costStr}`);
-  tray.setToolTip(`claude-cost-cry: 오늘 ${costStr} (${callCount}건)`);
+  tray.setToolTip(tt('tray.today', { cost: costStr, count: callCount }));
 }
 
 async function startCostTracking() {
@@ -244,9 +253,13 @@ async function startCostTracking() {
   const { calculateCost, toEquivalent: _toEquiv } = await import('../dist/calculator.js');
   const { loadConfig } = await import('../dist/config.js');
   const { getExchangeRate } = await import('../dist/exchange.js');
+  const { t, setLocale, getLocaleStrings } = await import('../dist/i18n.js');
 
+  _t = t;
   _toEquivalent = _toEquiv;
   config = loadConfig();
+  if (config.language) setLocale(config.language);
+  _localeStrings = getLocaleStrings();
   exchangeInfo = await getExchangeRate(config);
 
   const { usages: todayUsages, fileOffsets } = await scanToday(config);
@@ -320,6 +333,12 @@ app.whenReady().then(async () => {
     const { getExchangeRate } = await import('../dist/exchange.js');
     config = updateConfig(updates);
 
+    if (updates.language !== undefined) {
+      const { setLocale, getLocaleStrings } = await import('../dist/i18n.js');
+      setLocale(updates.language);
+      _localeStrings = getLocaleStrings();
+    }
+
     if (updates.currency !== undefined || updates.exchangeRate !== undefined) {
       exchangeInfo = await getExchangeRate(config);
       updateTrayTitle();
@@ -366,17 +385,18 @@ app.whenReady().then(async () => {
     overlay.setSize(WIDGET_WIDTH, h);
   });
 
+  await startCostTracking();
+
   tray = new Tray(createTrayIcon());
   tray.setContextMenu(
     Menu.buildFromTemplate([
-      { label: '위젯 열기/닫기', click: toggleOverlay },
+      { label: tt('tray.toggle'), click: toggleOverlay },
       { type: 'separator' },
-      { label: '종료', click: () => app.quit() },
+      { label: tt('tray.quit'), click: () => app.quit() },
     ])
   );
   tray.on('click', toggleOverlay);
 
-  await startCostTracking();
   updateTrayTitle();
 
   createOverlay();

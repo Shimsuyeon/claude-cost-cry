@@ -1,4 +1,4 @@
-import { getPricing, EQUIVALENTS } from './pricing.js';
+import { getPricing, getEquivalents } from './pricing.js';
 import { calculateCost as providerCalculateCost, getProvider } from './providers/index.js';
 import type { Usage, Config, EquivalentResult, SavingsNudge } from './types.js';
 
@@ -26,7 +26,7 @@ export function formatCostShort(cost: number): string {
 
 export function getAllEquivalents(config: Config) {
   const custom = config?.customEquivalents || [];
-  return [...custom, ...EQUIVALENTS];
+  return [...custom, ...getEquivalents()];
 }
 
 export function toEquivalent(cost: number, config: Config): EquivalentResult | null {
