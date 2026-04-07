@@ -382,7 +382,17 @@
   }
 
   /* ── TOP 3 panel ── */
-  .top-panel.open { max-height: 220px; }
+  .top-panel.open { max-height: 280px; overflow-y: auto; }
+
+  .top-summary {
+    font-size: 10px;
+    color: rgba(255, 255, 255, 0.4);
+    margin-bottom: 8px;
+    padding: 4px 8px;
+    background: rgba(255, 255, 255, 0.04);
+    border-radius: 4px;
+    text-align: center;
+  }
 
   .top-panel-title {
     font-size: 11px;
@@ -437,11 +447,33 @@
     color: rgba(255, 255, 255, 0.4);
     margin-left: 28px;
     margin-top: -2px;
-    margin-bottom: 4px;
+    margin-bottom: 2px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    cursor: pointer;
   }
+
+  .top-prompt:hover { color: rgba(255, 255, 255, 0.6); }
+
+  .top-prompt.expanded {
+    white-space: pre-wrap;
+    word-break: break-all;
+    max-height: 120px;
+    overflow-y: auto;
+  }
+
+  .top-tokens {
+    font-size: 9px;
+    color: rgba(255, 255, 255, 0.3);
+    margin-left: 28px;
+    margin-bottom: 4px;
+    display: flex;
+    gap: 8px;
+  }
+
+  .top-tokens .tok-in { color: rgba(100, 200, 255, 0.5); }
+  .top-tokens .tok-out { color: rgba(255, 180, 100, 0.5); }
 
   .top-empty {
     font-size: 11px;
@@ -724,6 +756,7 @@
   <div class="panel top-panel" id="topPanel">
     <div class="panel-divider"></div>
     <div class="top-panel-title">🏆 오늘의 가장 비싼 요청</div>
+    <div class="top-summary" id="topSummary"></div>
     <div id="topList"></div>
   </div>
 
@@ -796,6 +829,7 @@
   const chartBody = document.getElementById('chartBody');
   const modelsBody = document.getElementById('modelsBody');
   const topList = document.getElementById('topList');
+  const topSummary = document.getElementById('topSummary');
   const budgetInput = document.getElementById('budgetInput');
   const unitSelect = document.getElementById('unitSelect');
   const currencySelect = document.getElementById('currencySelect');
@@ -811,6 +845,12 @@
   let activePanel = null;
   let latestData = {};
   let currentExchange = null;
+
+  function formatTokens(n) {
+    if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M';
+    if (n >= 1_000) return (n / 1_000).toFixed(1) + 'K';
+    return String(n);
+  }
 
   function formatCostUsd(cost) {
     if (cost < 0.01) return `$${cost.toFixed(4)}`;
@@ -967,6 +1007,16 @@
 
   function renderTopList() {
     const items = latestData.topRequests || [];
+    const count = latestData.callCount || 0;
+    const total = latestData.totalCost || 0;
+
+    if (count > 0) {
+      const avg = total / count;
+      topSummary.innerHTML = `📋 오늘 ${count}건 · 평균 ${formatCost(avg)}/건`;
+    } else {
+      topSummary.innerHTML = '';
+    }
+
     if (items.length === 0) {
       topList.innerHTML = '<div class="top-empty">아직 요청이 없습니다</div>';
       return;
@@ -980,8 +1030,14 @@
         : /opus/i.test(modelKey) ? 'opus' : /haiku/i.test(modelKey) ? 'haiku'
         : /gpt|o[1-4]/i.test(modelKey) ? 'openai' : /gemini/i.test(modelKey) ? 'google' : 'sonnet';
       const pEmoji = req.providerEmoji ? `<span style="font-size:10px">${req.providerEmoji}</span> ` : '';
+      const hasFullPrompt = req.fullPrompt && req.fullPrompt.length > 30;
       const promptHtml = req.prompt
-        ? `<div class="top-prompt">💬 ${escapeHtml(req.prompt)}</div>`
+        ? `<div class="top-prompt" data-idx="${i}" ${hasFullPrompt ? 'title="클릭하면 전체 보기"' : ''}>💬 ${escapeHtml(req.prompt)}</div>`
+        : '';
+      const tokIn = req.inputTokens || 0;
+      const tokOut = req.outputTokens || 0;
+      const tokensHtml = (tokIn || tokOut)
+        ? `<div class="top-tokens"><span class="tok-in">↓ ${formatTokens(tokIn)}</span><span class="tok-out">↑ ${formatTokens(tokOut)}</span></div>`
         : '';
       return `
         <div class="top-item">
@@ -991,8 +1047,19 @@
           <span class="top-time">${req.time || ''}</span>
         </div>
         ${promptHtml}
+        ${tokensHtml}
       `;
     }).join('');
+
+    topList.querySelectorAll('.top-prompt[data-idx]').forEach(el => {
+      el.addEventListener('click', () => {
+        const idx = parseInt(el.dataset.idx);
+        const req = items[idx];
+        if (!req?.fullPrompt) return;
+        const isExpanded = el.classList.toggle('expanded');
+        el.textContent = isExpanded ? `💬 ${req.fullPrompt}` : `💬 ${req.prompt}`;
+      });
+    });
   }
 
   // ── Chart ──

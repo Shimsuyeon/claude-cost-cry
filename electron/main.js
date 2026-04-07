@@ -55,11 +55,15 @@ function createOverlay() {
   });
 }
 
+function cleanPrompt(text) {
+  if (!text) return null;
+  return text.replace(/\s+/g, ' ').trim();
+}
+
 function truncatePrompt(text, maxLen = 30) {
   if (!text) return null;
-  const clean = text.replace(/\s+/g, ' ').trim();
-  if (clean.length <= maxLen) return clean;
-  return clean.slice(0, maxLen - 1) + '…';
+  if (text.length <= maxLen) return text;
+  return text.slice(0, maxLen - 1) + '…';
 }
 
 function recordRequest(usage, cost) {
@@ -70,6 +74,7 @@ function recordRequest(usage, cost) {
 
   const provider = usage.provider || 'claude';
   const modelLabel = getModelLabelLocal(usage);
+  const fullPrompt = cleanPrompt(usage.prompt);
 
   topRequests.push({
     cost,
@@ -79,7 +84,8 @@ function recordRequest(usage, cost) {
     time,
     inputTokens: totalInput,
     outputTokens: usage.outputTokens || 0,
-    prompt: truncatePrompt(usage.prompt),
+    prompt: truncatePrompt(fullPrompt),
+    fullPrompt: fullPrompt,
   });
 
   topRequests.sort((a, b) => b.cost - a.cost);
