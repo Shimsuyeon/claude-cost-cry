@@ -1,15 +1,26 @@
 import chalk from 'chalk';
 import { formatCostShort, formatTokenCount, toEquivalent, getSavingsNudge } from './calculator.js';
 import { getMessage, getStartupMood } from './messages.js';
-import { getModelLabel } from './pricing.js';
 import { formatLocalCost } from './exchange.js';
+import { getModelLabel as getProviderModelLabel, getProviderEmoji, getProviderDisplayName } from './providers/index.js';
 
-const VERSION = '0.2.0';
+const VERSION = '0.3.0';
 
 const DIVIDER = chalk.gray('─'.repeat(56));
 
 function fc(cost, ex) {
   return ex ? formatLocalCost(cost, ex) : formatCostShort(cost);
+}
+
+function resolveModelLabel(usage) {
+  if (usage.provider) return getProviderModelLabel(usage);
+  return usage.model || 'Unknown';
+}
+
+function providerTag(providerName) {
+  if (!providerName) return '';
+  const emoji = getProviderEmoji(providerName);
+  return `${emoji} `;
 }
 
 export function showBanner() {
@@ -19,7 +30,7 @@ export function showBanner() {
   console.log();
 }
 
-export function showTodaySummary(totalCost, callCount, budgetStatus, config, exchange) {
+export function showTodaySummary(totalCost, callCount, budgetStatus, config, exchange, costByProvider) {
   const mood = getStartupMood(totalCost);
   const equiv = toEquivalent(totalCost, config);
   const equivText = equiv
@@ -32,6 +43,15 @@ export function showTodaySummary(totalCost, callCount, budgetStatus, config, exc
   if (callCount > 0) {
     console.log(chalk.gray(`     API 호출 ${callCount}건`));
   }
+
+  if (costByProvider && Object.keys(costByProvider).length > 1) {
+    const breakdown = Object.entries(costByProvider)
+      .sort((a, b) => b[1] - a[1])
+      .map(([p, c]) => `${getProviderEmoji(p)} ${getProviderDisplayName(p)} ${fc(c, exchange)}`)
+      .join('  ');
+    console.log(chalk.gray(`     ${breakdown}`));
+  }
+
   console.log(chalk.gray(`     ${mood}`));
 
   if (exchange && exchange.currency !== 'USD') {
@@ -94,9 +114,14 @@ export function showCostUpdate(usage, cost, totalCost, config, exchange) {
     `[${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}]`
   );
 
-  const modelLabel = getModelLabel(usage.model);
-  const modelColor = modelLabel === 'Opus' ? chalk.magenta : modelLabel === 'Haiku' ? chalk.green : chalk.blue;
-  const modelStr = modelColor(modelLabel);
+  const modelLabel = resolveModelLabel(usage);
+  const pEmoji = providerTag(usage.provider);
+  const modelColor = /opus/i.test(modelLabel) ? chalk.magenta
+    : /haiku/i.test(modelLabel) ? chalk.green
+    : /gpt/i.test(modelLabel) ? chalk.hex('#74aa9c')
+    : /gemini/i.test(modelLabel) ? chalk.hex('#4285f4')
+    : chalk.blue;
+  const modelStr = modelColor(`${pEmoji}${modelLabel}`);
 
   const totalInputTokens = usage.inputTokens + usage.cacheCreationTokens + usage.cacheReadTokens;
   const tokenInfo = chalk.gray(
@@ -150,11 +175,12 @@ export function showTopExpensive(topRequests, exchange) {
 
   topRequests.forEach((req, i) => {
     const medal = ['🥇', '🥈', '🥉'][i];
-    const modelColor = req.model === 'Opus' ? chalk.magenta
-      : req.model === 'Haiku' ? chalk.green : chalk.blue;
+    const pEmoji = req.providerEmoji ? `${req.providerEmoji} ` : '';
+    const modelColor = /opus/i.test(req.model) ? chalk.magenta
+      : /haiku/i.test(req.model) ? chalk.green : chalk.blue;
     const timeStr = req.time || '';
 
-    console.log(`  ${medal} ${chalk.bold.yellow(fc(req.cost, exchange))}  ${modelColor(req.model)}  ${chalk.gray(timeStr)}`);
+    console.log(`  ${medal} ${chalk.bold.yellow(fc(req.cost, exchange))}  ${pEmoji}${modelColor(req.model)}  ${chalk.gray(timeStr)}`);
 
     if (req.prompt) {
       console.log(chalk.white(`     💬 "${req.prompt}"`));
@@ -164,7 +190,7 @@ export function showTopExpensive(topRequests, exchange) {
   });
 }
 
-export function showShutdown(sessionCost, totalCost, savingsTotal, topRequests, config, exchange) {
+export function showShutdown(sessionCost, totalCost, savingsTotal, topRequests, config, exchange, costByProvider) {
   console.log();
   console.log(DIVIDER);
 
@@ -175,6 +201,14 @@ export function showShutdown(sessionCost, totalCost, savingsTotal, topRequests, 
 
   console.log(`  📋 이번 세션 비용: ${chalk.bold.yellow(fc(sessionCost, exchange))}${equivText}`);
   console.log(`  📊 오늘 총 비용: ${chalk.bold.yellow(fc(totalCost, exchange))}`);
+
+  if (costByProvider && Object.keys(costByProvider).length > 1) {
+    const breakdown = Object.entries(costByProvider)
+      .sort((a, b) => b[1] - a[1])
+      .map(([p, c]) => `${getProviderEmoji(p)} ${getProviderDisplayName(p)} ${fc(c, exchange)}`)
+      .join('  ');
+    console.log(chalk.gray(`     ${breakdown}`));
+  }
 
   if (savingsTotal > 0.01) {
     console.log(chalk.cyan(`  💡 절약 가능했던 금액: ${fc(savingsTotal, exchange)} (최저가 모델 기준)`));

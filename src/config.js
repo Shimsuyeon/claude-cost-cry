@@ -13,6 +13,9 @@ const DEFAULTS = {
   showNudge: true,
   equivalentUnit: 'auto',
   customEquivalents: [],
+  // 로그 소스: [{ provider: 'openai', path: '/path/to/logs' }, ...]
+  // Claude Code는 자동 감지되므로 여기에 넣을 필요 없음
+  logSources: [],
 };
 
 export function loadConfig() {

@@ -1,21 +1,20 @@
 import { getPricing, EQUIVALENTS } from './pricing.js';
+import { calculateCost as providerCalculateCost, getProvider } from './providers/index.js';
 
 /**
  * usage 데이터로부터 비용을 계산한다 (USD).
- * 비용 = input * input_price + output * output_price
- *       + cache_creation * cache_write_price
- *       + cache_read * cache_read_price
- * 단가는 1M 토큰 기준이므로 / 1_000_000 처리.
+ * provider가 있으면 프로바이더 시스템 사용, 없으면 레거시 호환.
  */
 export function calculateCost(usage) {
+  if (usage.provider) {
+    return providerCalculateCost(usage);
+  }
+
   const pricing = getPricing(usage.model);
-
-  const inputCost = (usage.inputTokens / 1_000_000) * pricing.input;
-  const outputCost = (usage.outputTokens / 1_000_000) * pricing.output;
-  const cacheWriteCost = (usage.cacheCreationTokens / 1_000_000) * pricing.cacheWrite;
-  const cacheReadCost = (usage.cacheReadTokens / 1_000_000) * pricing.cacheRead;
-
-  return inputCost + outputCost + cacheWriteCost + cacheReadCost;
+  return (usage.inputTokens / 1e6) * pricing.input
+       + (usage.outputTokens / 1e6) * pricing.output
+       + (usage.cacheCreationTokens / 1e6) * pricing.cacheWrite
+       + (usage.cacheReadTokens / 1e6) * pricing.cacheRead;
 }
 
 export function formatCost(cost) {
@@ -28,19 +27,11 @@ export function formatCostShort(cost) {
   return `$${cost.toFixed(2)}`;
 }
 
-/**
- * 전체 환산 아이템 목록을 반환한다 (빌트인 + 커스텀).
- */
 export function getAllEquivalents(config) {
   const custom = config?.customEquivalents || [];
   return [...custom, ...EQUIVALENTS];
 }
 
-/**
- * 비용을 일상 소비 아이템으로 환산한다.
- * config.equivalentUnit이 'auto'면 금액에 맞는 걸 자동 선택,
- * 특정 이름이면 해당 아이템으로 고정.
- */
 export function toEquivalent(cost, config) {
   if (cost < 0.01) return null;
 
@@ -50,10 +41,7 @@ export function toEquivalent(cost, config) {
   if (unit !== 'auto') {
     const fixed = allItems.find(i => i.name === unit);
     if (fixed) {
-      return {
-        ...fixed,
-        count: Math.round((cost / fixed.price) * 10) / 10,
-      };
+      return { ...fixed, count: Math.round((cost / fixed.price) * 10) / 10 };
     }
   }
 
@@ -64,10 +52,7 @@ export function toEquivalent(cost, config) {
     }
   }
 
-  return {
-    ...allItems[0],
-    count: Math.round((cost / allItems[0].price) * 10) / 10,
-  };
+  return { ...allItems[0], count: Math.round((cost / allItems[0].price) * 10) / 10 };
 }
 
 export function formatTokenCount(n) {
@@ -77,38 +62,27 @@ export function formatTokenCount(n) {
 }
 
 /**
- * 같은 요청을 다른 모델로 했을 때의 비용을 계산한다.
- * 토큰 수는 동일하다고 가정 (모델 간 토큰화 차이는 무시).
- */
-export function calculateAlternativeCosts(usage) {
-  const models = ['opus', 'sonnet', 'haiku'];
-  const results = {};
-
-  for (const modelKey of models) {
-    const pricing = getPricing(modelKey);
-    const totalInput = usage.inputTokens + usage.cacheCreationTokens + usage.cacheReadTokens;
-    const cost = (totalInput / 1_000_000) * pricing.input
-               + (usage.outputTokens / 1_000_000) * pricing.output;
-    results[modelKey] = { cost, label: pricing.label };
-  }
-
-  return results;
-}
-
-/**
- * 현재 모델 대비 가장 저렴한 대안의 절약 금액을 계산한다.
+ * 같은 프로바이더 내에서 다른 모델을 썼을 때의 비용을 계산한다.
  */
 export function getSavingsNudge(usage, actualCost) {
-  const alts = calculateAlternativeCosts(usage);
-  const currentModel = getPricing(usage.model).label.toLowerCase();
+  const provider = usage.provider ? getProvider(usage.provider) : null;
+  if (!provider) return null;
+
+  const models = provider.models;
+  const currentLabel = provider.getModelLabel(usage.model).toLowerCase();
 
   let bestSaving = null;
 
-  for (const [key, alt] of Object.entries(alts)) {
-    if (key === currentModel) continue;
-    const saving = actualCost - alt.cost;
+  for (const [key, pricing] of Object.entries(models)) {
+    if (pricing.label.toLowerCase() === currentLabel) continue;
+
+    const totalInput = usage.inputTokens + usage.cacheCreationTokens + usage.cacheReadTokens;
+    const altCost = (totalInput / 1e6) * pricing.input
+                  + (usage.outputTokens / 1e6) * pricing.output;
+
+    const saving = actualCost - altCost;
     if (saving > 0.001 && (!bestSaving || saving > bestSaving.saving)) {
-      bestSaving = { model: alt.label, cost: alt.cost, saving };
+      bestSaving = { model: pricing.label, cost: altCost, saving };
     }
   }
 

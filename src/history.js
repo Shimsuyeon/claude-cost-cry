@@ -1,12 +1,10 @@
-import { readFile } from 'node:fs/promises';
+import { readFile, readdir } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { homedir } from 'node:os';
-import { parseLine, extractUsage } from './parser.js';
 import { calculateCost } from './calculator.js';
-import { getModelLabel } from './pricing.js';
-
-const CLAUDE_DIR = join(homedir(), '.claude', 'projects');
+import { loadConfig } from './config.js';
+import { buildLogSources } from './watcher.js';
+import { getProvider } from './providers/index.js';
 
 function toDateKey(timestamp) {
   const d = new Date(timestamp);
@@ -18,11 +16,20 @@ function getDayOfWeek(dateKey) {
   return days[new Date(dateKey).getDay()];
 }
 
-/**
- * 전체 로그를 스캔하여 날짜별 비용, 호출 수, 모델별 비용을 집계한다.
- */
+function parseLine(line) {
+  const trimmed = line.trim();
+  if (!trimmed) return null;
+  try {
+    return JSON.parse(trimmed);
+  } catch {
+    return null;
+  }
+}
+
 export async function aggregateByDate(daysBack = 30) {
-  if (!existsSync(CLAUDE_DIR)) return [];
+  const config = loadConfig();
+  const sources = buildLogSources(config);
+  if (sources.length === 0) return [];
 
   const cutoff = new Date();
   cutoff.setDate(cutoff.getDate() - daysBack);
@@ -31,51 +38,57 @@ export async function aggregateByDate(daysBack = 30) {
 
   const dailyMap = new Map();
 
-  const files = await findJsonlFiles(CLAUDE_DIR);
+  for (const source of sources) {
+    const provider = getProvider(source.provider);
+    if (!provider) continue;
 
-  for (const filePath of files) {
-    try {
-      const content = await readFile(filePath, 'utf-8');
-      const lines = content.split('\n');
+    const files = await findJsonlFiles(source.path);
 
-      for (const line of lines) {
-        const entry = parseLine(line);
-        if (!entry) continue;
+    for (const filePath of files) {
+      try {
+        const content = await readFile(filePath, 'utf-8');
+        const lines = content.split('\n');
 
-        const usage = extractUsage(entry);
-        if (!usage) continue;
+        for (const line of lines) {
+          const entry = parseLine(line);
+          if (!entry) continue;
 
-        const entryTime = new Date(usage.timestamp).getTime();
-        if (entryTime < cutoffMs) continue;
+          const usage = provider.parseLogLine(entry);
+          if (!usage) continue;
 
-        const cost = calculateCost(usage);
-        const dateKey = toDateKey(usage.timestamp);
-        const modelLabel = getModelLabel(usage.model);
+          const entryTime = new Date(usage.timestamp).getTime();
+          if (entryTime < cutoffMs) continue;
 
-        if (!dailyMap.has(dateKey)) {
-          dailyMap.set(dateKey, {
-            date: dateKey,
-            day: getDayOfWeek(dateKey),
-            totalCost: 0,
-            callCount: 0,
-            models: {},
-          });
+          const cost = calculateCost(usage);
+          const dateKey = toDateKey(usage.timestamp);
+          const modelLabel = provider.getModelLabel(usage.model);
+
+          if (!dailyMap.has(dateKey)) {
+            dailyMap.set(dateKey, {
+              date: dateKey,
+              day: getDayOfWeek(dateKey),
+              totalCost: 0,
+              callCount: 0,
+              models: {},
+              providers: {},
+            });
+          }
+
+          const day = dailyMap.get(dateKey);
+          day.totalCost += cost;
+          day.callCount++;
+          day.models[modelLabel] = (day.models[modelLabel] || 0) + cost;
+          day.providers[source.provider] = (day.providers[source.provider] || 0) + cost;
         }
-
-        const day = dailyMap.get(dateKey);
-        day.totalCost += cost;
-        day.callCount++;
-        day.models[modelLabel] = (day.models[modelLabel] || 0) + cost;
+      } catch {
+        // skip
       }
-    } catch {
-      // skip
     }
   }
 
   const days = Array.from(dailyMap.values());
   days.sort((a, b) => a.date.localeCompare(b.date));
 
-  // 빈 날짜 채우기
   const result = [];
   if (days.length > 0) {
     const startDate = new Date(days[0].date);
@@ -90,6 +103,7 @@ export async function aggregateByDate(daysBack = 30) {
         totalCost: 0,
         callCount: 0,
         models: {},
+        providers: {},
       });
     }
   }
@@ -97,9 +111,6 @@ export async function aggregateByDate(daysBack = 30) {
   return result;
 }
 
-/**
- * 일별 데이터로부터 주간/월간 통계를 계산한다.
- */
 export function computeStats(dailyData) {
   if (dailyData.length === 0) {
     return { totalCost: 0, avgDaily: 0, maxDay: null, minDay: null, totalCalls: 0, daysActive: 0 };
@@ -121,18 +132,10 @@ export function computeStats(dailyData) {
     }
   }
 
-  return {
-    totalCost,
-    avgDaily: daysActive > 0 ? totalCost / daysActive : 0,
-    maxDay,
-    minDay,
-    totalCalls,
-    daysActive,
-  };
+  return { totalCost, avgDaily: daysActive > 0 ? totalCost / daysActive : 0, maxDay, minDay, totalCalls, daysActive };
 }
 
 async function findJsonlFiles(dir) {
-  const { readdir } = await import('node:fs/promises');
   const files = [];
 
   async function walk(currentDir) {

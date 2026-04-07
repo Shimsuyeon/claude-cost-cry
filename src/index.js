@@ -2,9 +2,9 @@ import { existsSync } from 'node:fs';
 import { calculateCost, getSavingsNudge } from './calculator.js';
 import { loadConfig, getBudgetStatus } from './config.js';
 import { showBanner, showTodaySummary, showCostUpdate, showBudgetAlert, showShutdown, showError, showInfo } from './display.js';
-import { scanToday, startWatching, getClaudeProjectsDir } from './watcher.js';
-import { getModelLabel } from './pricing.js';
+import { scanToday, startWatching, getClaudeProjectsDir, buildLogSources } from './watcher.js';
 import { getExchangeRate } from './exchange.js';
+import { getModelLabel, getProviderEmoji, getProviderDisplayName } from './providers/index.js';
 
 function truncatePrompt(text, maxLen = 30) {
   if (!text) return null;
@@ -21,7 +21,9 @@ function recordRequest(topRequests, usage, cost) {
 
   topRequests.push({
     cost,
-    model: getModelLabel(usage.model),
+    provider: usage.provider,
+    providerEmoji: getProviderEmoji(usage.provider),
+    model: getModelLabel(usage),
     time,
     inputTokens: totalInput,
     outputTokens: usage.outputTokens,
@@ -35,29 +37,38 @@ function recordRequest(topRequests, usage, cost) {
 export async function main() {
   showBanner();
 
-  const claudeDir = getClaudeProjectsDir();
-  if (!existsSync(claudeDir)) {
-    showError(`Claude Code 로그 디렉토리를 찾을 수 없습니다: ${claudeDir}`);
-    showInfo('Claude Code를 먼저 사용해야 로그가 생성됩니다.');
+  const config = loadConfig();
+  const sources = buildLogSources(config);
+
+  if (sources.length === 0) {
+    const claudeDir = getClaudeProjectsDir();
+    showError(`로그 디렉토리를 찾을 수 없습니다: ${claudeDir}`);
+    showInfo('Claude Code를 먼저 사용하거나, config에 로그 소스를 추가하세요.');
+    showInfo('  claude-cost-cry config --add-source openai:/path/to/logs');
     process.exit(1);
   }
 
-  const config = loadConfig();
-
+  const providerNames = [...new Set(sources.map(s => s.provider))];
+  const sourceInfo = providerNames
+    .map(p => `${getProviderEmoji(p)} ${getProviderDisplayName(p)}`)
+    .join(' + ');
+  showInfo(`추적 중: ${sourceInfo}`);
   showInfo('오늘의 사용량을 스캔하는 중...');
 
   const exchange = await getExchangeRate(config);
 
-  const { usages: todayUsages, fileOffsets } = await scanToday();
+  const { usages: todayUsages, fileOffsets } = await scanToday(config);
 
   let totalCost = 0;
   let callCount = todayUsages.length;
   let totalPotentialSavings = 0;
   const topRequests = [];
+  const costByProvider = {};
 
   for (const usage of todayUsages) {
     const cost = calculateCost(usage);
     totalCost += cost;
+    costByProvider[usage.provider] = (costByProvider[usage.provider] || 0) + cost;
     recordRequest(topRequests, usage, cost);
     const nudge = getSavingsNudge(usage, cost);
     if (nudge) totalPotentialSavings += nudge.saving;
@@ -68,7 +79,7 @@ export async function main() {
   }
 
   const budgetStatus = getBudgetStatus(totalCost, config.dailyBudget);
-  showTodaySummary(totalCost, callCount, budgetStatus, config, exchange);
+  showTodaySummary(totalCost, callCount, budgetStatus, config, exchange, costByProvider);
 
   const sessionStartCost = totalCost;
   let lastBudgetStatus = budgetStatus.status;
@@ -77,6 +88,7 @@ export async function main() {
     const cost = calculateCost(usage);
     totalCost += cost;
     callCount++;
+    costByProvider[usage.provider] = (costByProvider[usage.provider] || 0) + cost;
 
     recordRequest(topRequests, usage, cost);
 
@@ -93,7 +105,7 @@ export async function main() {
       }
       lastBudgetStatus = newBudgetStatus.status;
     }
-  });
+  }, config);
 
   if (!watcher) {
     showError('파일 감시를 시작할 수 없습니다.');
@@ -102,7 +114,7 @@ export async function main() {
 
   const shutdown = () => {
     const sessionCost = totalCost - sessionStartCost;
-    showShutdown(sessionCost, totalCost, totalPotentialSavings, topRequests, config, exchange);
+    showShutdown(sessionCost, totalCost, totalPotentialSavings, topRequests, config, exchange, costByProvider);
     watcher.close();
     process.exit(0);
   };

@@ -37,6 +37,17 @@ if (command === 'config') {
       console.log(`  커스텀 단위:  ${config.customEquivalents.map(e => `${e.emoji} ${e.name}`).join(', ')}`);
     }
     console.log();
+    if (config.logSources?.length > 0) {
+      console.log(`  로그 소스:`);
+      console.log(`     🟣 Claude Code (자동 감지)`);
+      for (const src of config.logSources) {
+        const providerEmoji = { claude: '🟣', openai: '🟢', google: '🔵' }[src.provider] || '⚪';
+        console.log(`     ${providerEmoji} ${src.provider}: ${src.path}`);
+      }
+    } else {
+      console.log(`  로그 소스:    🟣 Claude Code (자동 감지)`);
+    }
+    console.log();
     console.log(`  사용 가능한 단위: ${allItems.map(e => e.name).join(', ')}`);
     console.log(`  지원 통화: ${SUPPORTED_CURRENCIES.join(', ')}`);
     console.log();
@@ -123,6 +134,45 @@ if (command === 'config') {
         i += 2;
         break;
       }
+      case '--add-source': {
+        // format: "provider:path"  예: "openai:/path/to/logs"
+        const { getProviderNames } = await import('../src/providers/index.js');
+        const colonIdx = value.indexOf(':');
+        if (colonIdx === -1) {
+          console.error(`  ❌ 형식: --add-source "프로바이더:경로"  예: "openai:/path/to/logs"`);
+          console.error(`     지원 프로바이더: ${getProviderNames().join(', ')}`);
+          process.exit(1);
+        }
+        const srcProvider = value.slice(0, colonIdx);
+        const srcPath = value.slice(colonIdx + 1);
+        if (!getProviderNames().includes(srcProvider)) {
+          console.error(`  ❌ 알 수 없는 프로바이더: ${srcProvider}. 지원: ${getProviderNames().join(', ')}`);
+          process.exit(1);
+        }
+        const cfg3 = loadConfig();
+        const sources = (cfg3.logSources || []).filter(s => !(s.provider === srcProvider && s.path === srcPath));
+        sources.push({ provider: srcProvider, path: srcPath });
+        updateConfig({ logSources: sources });
+        showConfigUpdate('로그 소스 추가', `${srcProvider}:${srcPath}`);
+        i += 2;
+        break;
+      }
+      case '--remove-source': {
+        const cfg4 = loadConfig();
+        const colonIdx2 = value.indexOf(':');
+        let filtered2;
+        if (colonIdx2 !== -1) {
+          const rp = value.slice(0, colonIdx2);
+          const rpath = value.slice(colonIdx2 + 1);
+          filtered2 = (cfg4.logSources || []).filter(s => !(s.provider === rp && s.path === rpath));
+        } else {
+          filtered2 = (cfg4.logSources || []).filter(s => s.provider !== value);
+        }
+        updateConfig({ logSources: filtered2 });
+        showConfigUpdate('로그 소스 삭제', value);
+        i += 2;
+        break;
+      }
       default:
         console.error(`  ❌ 알 수 없는 옵션: ${key}`);
         process.exit(1);
@@ -188,13 +238,14 @@ if (command === 'config') {
     --remove-unit <이름>       커스텀 환산 단위 삭제
     --currency <코드>          표시 통화 (USD, KRW, JPY, EUR, GBP, CNY)
     --exchange-rate <숫자|auto> 환율 수동 고정. 자동: --exchange-rate auto
+    --add-source "프로바이더:경로"  로그 소스 추가 (openai, google)
+    --remove-source <프로바이더>    로그 소스 삭제
   
   예시:
     claude-cost-cry config --daily-budget 10
     claude-cost-cry config --unit 치킨
-    claude-cost-cry config --add-unit "떡볶이:3.5:🍜:그릇"
     claude-cost-cry config --currency KRW
-    claude-cost-cry config --exchange-rate 1350
+    claude-cost-cry config --add-source "openai:/path/to/api-logs"
   `);
 } else {
   const { main } = await import('../src/index.js');

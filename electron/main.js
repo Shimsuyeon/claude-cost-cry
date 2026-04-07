@@ -12,6 +12,7 @@ let callCount = 0;
 let config = {};
 let topRequests = [];
 let exchangeInfo = null;
+let costByProvider = {};
 
 const WIDGET_WIDTH = 280;
 const WIDGET_HEIGHT = 140;
@@ -66,9 +67,14 @@ function recordRequest(usage, cost) {
     ? new Date(usage.timestamp).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })
     : '';
 
+  const provider = usage.provider || 'claude';
+  const modelLabel = getModelLabelLocal(usage);
+
   topRequests.push({
     cost,
-    model: getPricingByKey(getModelKey(usage.model)).label,
+    provider,
+    providerEmoji: PROVIDER_META[provider]?.emoji || '⚪',
+    model: modelLabel,
     time,
     inputTokens: totalInput,
     outputTokens: usage.outputTokens || 0,
@@ -77,6 +83,35 @@ function recordRequest(usage, cost) {
 
   topRequests.sort((a, b) => b.cost - a.cost);
   if (topRequests.length > 3) topRequests.length = 3;
+}
+
+const PROVIDER_META = {
+  claude: { emoji: '🟣', displayName: 'Claude' },
+  openai: { emoji: '🟢', displayName: 'OpenAI' },
+  google: { emoji: '🔵', displayName: 'Gemini' },
+};
+
+function getModelLabelLocal(usage) {
+  const model = usage.model || '';
+  if (/opus/i.test(model)) return 'Opus';
+  if (/haiku/i.test(model)) return 'Haiku';
+  if (/sonnet/i.test(model)) return 'Sonnet';
+  if (/gpt-4\.1-nano/i.test(model)) return 'GPT-4.1 nano';
+  if (/gpt-4\.1-mini/i.test(model)) return 'GPT-4.1 mini';
+  if (/gpt-4\.1/i.test(model)) return 'GPT-4.1';
+  if (/gpt-4o-mini/i.test(model)) return 'GPT-4o mini';
+  if (/gpt-4o/i.test(model)) return 'GPT-4o';
+  if (/o4-mini/i.test(model)) return 'o4-mini';
+  if (/o3-mini/i.test(model)) return 'o3 mini';
+  if (/o3/i.test(model)) return 'o3';
+  if (/o1-mini/i.test(model)) return 'o1 mini';
+  if (/o1/i.test(model)) return 'o1';
+  if (/gpt-4/i.test(model)) return 'GPT-4';
+  if (/gpt-3/i.test(model)) return 'GPT-3.5';
+  if (/gemini.*2\.5.*pro/i.test(model)) return 'Gemini 2.5 Pro';
+  if (/gemini.*flash/i.test(model)) return 'Gemini Flash';
+  if (/gemini.*pro/i.test(model)) return 'Gemini Pro';
+  return model.split('/').pop() || 'Unknown';
 }
 
 function buildPayload(deltaCost, usage) {
@@ -89,49 +124,43 @@ function buildPayload(deltaCost, usage) {
     callCount,
     deltaCost: deltaCost || 0,
     model: usage?.model,
+    provider: usage?.provider,
     tier: getTier(totalCost),
     equivalent: getEquivalent(totalCost),
     budget: budgetStatus,
     nudge: usage ? getNudgeInfo(usage, deltaCost) : null,
     topRequests,
     exchange: exchangeInfo,
+    costByProvider,
   };
 }
 
 function getNudgeInfo(usage, cost) {
   if (!config.showNudge || !cost || cost < 0.01) return null;
-  const models = ['opus', 'sonnet', 'haiku'];
-  const results = {};
-  for (const key of models) {
-    const p = getPricingByKey(key);
-    const totalInput = (usage.inputTokens || 0) + (usage.cacheCreationTokens || 0) + (usage.cacheReadTokens || 0);
-    results[key] = (totalInput / 1e6) * p.input + ((usage.outputTokens || 0) / 1e6) * p.output;
+
+  const provider = usage.provider || 'claude';
+  let models;
+  if (provider === 'claude') {
+    models = { opus: { input: 15, output: 75 }, sonnet: { input: 3, output: 15 }, haiku: { input: 0.8, output: 4 } };
+  } else if (provider === 'openai') {
+    models = { 'gpt-4o': { input: 2.5, output: 10 }, 'gpt-4o-mini': { input: 0.15, output: 0.6 }, 'o3-mini': { input: 1.1, output: 4.4 } };
+  } else {
+    return null;
   }
-  const currentKey = getModelKey(usage.model);
+
+  const totalInput = (usage.inputTokens || 0) + (usage.cacheCreationTokens || 0) + (usage.cacheReadTokens || 0);
+  const currentLabel = getModelLabelLocal(usage).toLowerCase();
+
   let best = null;
-  for (const [key, altCost] of Object.entries(results)) {
-    if (key === currentKey) continue;
+  for (const [key, p] of Object.entries(models)) {
+    if (key === currentLabel) continue;
+    const altCost = (totalInput / 1e6) * p.input + ((usage.outputTokens || 0) / 1e6) * p.output;
     const saving = cost - altCost;
     if (saving > 0.005 && (!best || saving > best.saving)) {
-      best = { model: getPricingByKey(key).label, saving };
+      best = { model: key, saving };
     }
   }
   return best;
-}
-
-const PRICING = {
-  opus: { input: 15, output: 75, label: 'Opus' },
-  sonnet: { input: 3, output: 15, label: 'Sonnet' },
-  haiku: { input: 0.8, output: 4, label: 'Haiku' },
-};
-
-function getPricingByKey(key) { return PRICING[key] || PRICING.sonnet; }
-
-function getModelKey(name) {
-  if (!name) return 'sonnet';
-  if (/opus/i.test(name)) return 'opus';
-  if (/haiku/i.test(name)) return 'haiku';
-  return 'sonnet';
 }
 
 function toggleOverlay() {
@@ -228,11 +257,13 @@ async function startCostTracking() {
   config = loadConfig();
   exchangeInfo = await getExchangeRate(config);
 
-  const { usages: todayUsages, fileOffsets } = await scanToday();
+  const { usages: todayUsages, fileOffsets } = await scanToday(config);
 
   for (const usage of todayUsages) {
     const cost = calculateCost(usage);
     totalCost += cost;
+    const p = usage.provider || 'claude';
+    costByProvider[p] = (costByProvider[p] || 0) + cost;
     recordRequest(usage, cost);
   }
   callCount = todayUsages.length;
@@ -243,10 +274,12 @@ async function startCostTracking() {
     const cost = calculateCost(usage);
     totalCost += cost;
     callCount++;
+    const p = usage.provider || 'claude';
+    costByProvider[p] = (costByProvider[p] || 0) + cost;
     recordRequest(usage, cost);
     updateTrayTitle();
     sendCostUpdate(usage, cost);
-  });
+  }, config);
 }
 
 function createTrayIcon() {
@@ -279,11 +312,13 @@ app.whenReady().then(async () => {
     const { loadConfig } = await import('../src/config.js');
     const { getAllEquivalents } = await import('../src/calculator.js');
     const { SUPPORTED_CURRENCIES } = await import('../src/exchange.js');
+    const { getProviderNames } = await import('../src/providers/index.js');
     const cfg = loadConfig();
     return {
       ...cfg,
       allUnits: getAllEquivalents(cfg).map(e => ({ name: e.name, emoji: e.emoji })),
       supportedCurrencies: SUPPORTED_CURRENCIES,
+      supportedProviders: getProviderNames(),
       currentExchange: exchangeInfo,
     };
   });
