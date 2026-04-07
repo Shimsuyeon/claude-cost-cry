@@ -79,7 +79,13 @@ export async function aggregateByDate(daysBack = 30) {
           const day = dailyMap.get(dateKey);
           day.totalCost += cost;
           day.callCount++;
-          day.models[modelLabel] = (day.models[modelLabel] || 0) + cost;
+
+          if (!day.models[modelLabel]) {
+            day.models[modelLabel] = { cost: 0, calls: 0, provider: source.provider };
+          }
+          day.models[modelLabel].cost += cost;
+          day.models[modelLabel].calls++;
+
           day.providers[source.provider] = (day.providers[source.provider] || 0) + cost;
         }
       } catch {

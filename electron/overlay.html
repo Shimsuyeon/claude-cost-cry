@@ -517,6 +517,70 @@
 
   .chart-stat-label { color: rgba(255, 255, 255, 0.4); }
   .chart-stat-value { color: rgba(255, 255, 255, 0.7); font-weight: 600; }
+
+  .model-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 5px;
+    font-size: 10px;
+  }
+
+  .model-emoji { width: 14px; text-align: center; flex-shrink: 0; }
+
+  .model-name {
+    width: 70px;
+    color: rgba(255, 255, 255, 0.7);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex-shrink: 0;
+  }
+
+  .model-bar-bg {
+    flex: 1;
+    height: 10px;
+    background: rgba(255, 255, 255, 0.06);
+    border-radius: 3px;
+    overflow: hidden;
+    min-width: 0;
+  }
+
+  .model-bar-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.3s ease;
+  }
+
+  .model-bar-fill.color-claude { background: #b87fff; }
+  .model-bar-fill.color-openai { background: #74aa9c; }
+  .model-bar-fill.color-google { background: #4285f4; }
+  .model-bar-fill.color-cursor { background: #06b6d4; }
+
+  .model-cost {
+    width: 42px;
+    text-align: right;
+    color: rgba(255, 255, 255, 0.6);
+    font-weight: 600;
+    flex-shrink: 0;
+    font-size: 9px;
+  }
+
+  .model-pct {
+    width: 28px;
+    text-align: right;
+    color: rgba(255, 255, 255, 0.3);
+    flex-shrink: 0;
+    font-size: 9px;
+  }
+
+  .model-saving-tip {
+    font-size: 9px;
+    color: rgba(255, 200, 50, 0.7);
+    margin-top: 6px;
+    padding-top: 5px;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+  }
 </style>
 </head>
 <body>
@@ -524,6 +588,7 @@
 <div class="widget tier-peace" id="widget">
   <div class="toolbar">
     <div class="tool-btn" id="chartBtn" title="주간 리포트">📊</div>
+    <div class="tool-btn" id="modelsBtn" title="모델별 비용">🏷️</div>
     <div class="tool-btn" id="topBtn" title="비싼 요청 TOP 3">🏆</div>
     <div class="tool-btn" id="gearBtn" title="설정">⚙</div>
   </div>
@@ -557,6 +622,13 @@
     <div class="panel-divider"></div>
     <div class="chart-panel-title">📊 주간 비용 추이</div>
     <div id="chartBody"></div>
+  </div>
+
+  <!-- Models Panel -->
+  <div class="panel chart-panel" id="modelsPanel">
+    <div class="panel-divider"></div>
+    <div class="chart-panel-title">🏷️ 모델별 비용 (최근 7일)</div>
+    <div id="modelsBody"></div>
   </div>
 
   <!-- TOP 3 Panel -->
@@ -622,10 +694,13 @@
   const gearBtn = document.getElementById('gearBtn');
   const topBtn = document.getElementById('topBtn');
   const chartBtn = document.getElementById('chartBtn');
+  const modelsBtn = document.getElementById('modelsBtn');
   const settingsPanel = document.getElementById('settingsPanel');
   const topPanel = document.getElementById('topPanel');
   const chartPanel = document.getElementById('chartPanel');
+  const modelsPanel = document.getElementById('modelsPanel');
   const chartBody = document.getElementById('chartBody');
+  const modelsBody = document.getElementById('modelsBody');
   const topList = document.getElementById('topList');
   const budgetInput = document.getElementById('budgetInput');
   const unitSelect = document.getElementById('unitSelect');
@@ -675,9 +750,11 @@
     settingsPanel.classList.remove('open');
     topPanel.classList.remove('open');
     chartPanel.classList.remove('open');
+    modelsPanel.classList.remove('open');
     gearBtn.classList.remove('active');
     topBtn.classList.remove('active');
     chartBtn.classList.remove('active');
+    modelsBtn.classList.remove('active');
     activePanel = null;
     window.bridge.resizeWidget(false);
   }
@@ -697,6 +774,10 @@
       chartPanel.classList.add('open');
       chartBtn.classList.add('active');
       loadChart();
+    } else if (name === 'models') {
+      modelsPanel.classList.add('open');
+      modelsBtn.classList.add('active');
+      loadModels();
     }
 
     window.bridge.resizeWidget(true);
@@ -753,6 +834,14 @@
       return;
     }
     openPanel('chart');
+  });
+
+  modelsBtn.addEventListener('click', () => {
+    if (activePanel === 'models') {
+      closeAllPanels();
+      return;
+    }
+    openPanel('models');
   });
 
   topBtn.addEventListener('click', () => {
@@ -845,6 +934,49 @@
     chartBody.innerHTML = html;
   }
 
+  // ── Models ──
+
+  async function loadModels() {
+    modelsBody.innerHTML = '<div class="top-empty">로딩 중...</div>';
+    const report = await window.bridge.getReport(7);
+    const models = report.modelSummary || [];
+
+    if (models.length === 0) {
+      modelsBody.innerHTML = '<div class="top-empty">데이터가 없습니다</div>';
+      return;
+    }
+
+    const maxCost = models[0]?.cost || 0.01;
+    const COLORS = { claude: 'color-claude', openai: 'color-openai', google: 'color-google', cursor: 'color-cursor' };
+
+    let html = models.map(m => {
+      const pct = Math.round((m.cost / maxCost) * 100);
+      const colorClass = COLORS[m.provider] || 'color-claude';
+      return `
+        <div class="model-row">
+          <span class="model-emoji">${m.emoji || ''}</span>
+          <span class="model-name">${m.model}</span>
+          <div class="model-bar-bg">
+            <div class="model-bar-fill ${colorClass}" style="width:${pct}%"></div>
+          </div>
+          <span class="model-cost">${formatCost(m.cost)}</span>
+          <span class="model-pct">${m.pct}%</span>
+        </div>
+      `;
+    }).join('');
+
+    const savings = report.savingsSimulation || [];
+    if (savings.length > 0) {
+      html += '<div class="model-saving-tip">';
+      for (const s of savings.slice(0, 2)) {
+        html += `💡 ${s.from} → ${s.to} 였다면 ${formatCost(s.saving)} 절약<br>`;
+      }
+      html += '</div>';
+    }
+
+    modelsBody.innerHTML = html;
+  }
+
   // ── Settings save ──
 
   saveBtn.addEventListener('click', async () => {
@@ -884,6 +1016,7 @@
     if (activePanel === 'settings') gearBtn.classList.add('active');
     if (activePanel === 'top') topBtn.classList.add('active');
     if (activePanel === 'chart') chartBtn.classList.add('active');
+    if (activePanel === 'models') modelsBtn.classList.add('active');
 
     if (data.tier) emojiEl.textContent = data.tier.emoji;
     costEl.textContent = formatCost(data.totalCost);
@@ -901,7 +1034,7 @@
         ? ' (' + Object.entries(data.costByProvider)
             .sort((a, b) => b[1] - a[1])
             .map(([p, c]) => {
-              const meta = { claude: '🟣', openai: '🟢', google: '🔵' };
+              const meta = { claude: '🟣', openai: '🟢', google: '🔵', cursor: '⚡' };
               return `${meta[p] || ''}${formatCost(c)}`;
             }).join(' ') + ')'
         : '';
