@@ -39,6 +39,8 @@ export async function aggregateByDate(daysBack = 30) {
   const dailyMap = new Map();
 
   for (const source of sources) {
+    if (source.isApi) continue; // API 기반 프로바이더는 로컬 파일이 없으므로 건너뜀
+
     const provider = getProvider(source.provider);
     if (!provider) continue;
 

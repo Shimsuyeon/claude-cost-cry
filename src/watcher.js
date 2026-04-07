@@ -15,6 +15,7 @@ export function getClaudeProjectsDir() {
 /**
  * 로그 소스 목록을 빌드한다.
  * Claude Code는 항상 자동 포함, logSources에 추가된 것들도 포함.
+ * API 기반 프로바이더(예: Cursor)는 isApi: true 로 표시.
  */
 export function buildLogSources(config) {
   const sources = [];
@@ -26,8 +27,19 @@ export function buildLogSources(config) {
 
   // 사용자 설정 로그 소스 추가
   for (const src of (config?.logSources || [])) {
-    if (!src.provider || !src.path) continue;
-    if (src.provider === 'claude' && src.path === CLAUDE_DIR) continue; // 중복 방지
+    if (!src.provider) continue;
+
+    const provider = getProvider(src.provider);
+
+    if (provider?.isApiProvider) {
+      if (provider.isAvailable?.()) {
+        sources.push({ provider: src.provider, isApi: true });
+      }
+      continue;
+    }
+
+    if (!src.path) continue;
+    if (src.provider === 'claude' && src.path === CLAUDE_DIR) continue;
     if (existsSync(src.path)) {
       sources.push(src);
     }
@@ -79,6 +91,20 @@ export async function scanToday(config) {
   const todayStart = getTodayStart();
 
   for (const source of sources) {
+    // API 기반 프로바이더 (예: Cursor) — 서버 API 폴링
+    if (source.isApi) {
+      const apiProvider = getProvider(source.provider);
+      if (apiProvider?.scanToday) {
+        try {
+          const apiUsages = await apiProvider.scanToday();
+          usages.push(...apiUsages);
+        } catch {
+          // API 불가 시 무시
+        }
+      }
+      continue;
+    }
+
     const provider = getProvider(source.provider);
     if (!provider) continue;
 
@@ -117,6 +143,16 @@ export function startWatching(fileOffsets, onNewUsage, config) {
   const watchers = [];
 
   for (const source of sources) {
+    // API 기반 프로바이더 — 주기적 폴링
+    if (source.isApi) {
+      const apiProvider = getProvider(source.provider);
+      if (apiProvider?.startPolling) {
+        const poller = apiProvider.startPolling(onNewUsage);
+        if (poller) watchers.push(poller);
+      }
+      continue;
+    }
+
     const provider = getProvider(source.provider);
     if (!provider || !existsSync(source.path)) continue;
 

@@ -41,8 +41,12 @@ if (command === 'config') {
       console.log(`  로그 소스:`);
       console.log(`     🟣 Claude Code (자동 감지)`);
       for (const src of config.logSources) {
-        const providerEmoji = { claude: '🟣', openai: '🟢', google: '🔵' }[src.provider] || '⚪';
-        console.log(`     ${providerEmoji} ${src.provider}: ${src.path}`);
+        const providerEmoji = { claude: '🟣', openai: '🟢', google: '🔵', cursor: '⚡' }[src.provider] || '⚪';
+        if (src.path) {
+          console.log(`     ${providerEmoji} ${src.provider}: ${src.path}`);
+        } else {
+          console.log(`     ${providerEmoji} ${src.provider} (API 폴링)`);
+        }
       }
     } else {
       console.log(`  로그 소스:    🟣 Claude Code (자동 감지)`);
@@ -135,14 +139,41 @@ if (command === 'config') {
         break;
       }
       case '--add-source': {
-        // format: "provider:path"  예: "openai:/path/to/logs"
-        const { getProviderNames } = await import('../src/providers/index.js');
+        const { getProviderNames, getProvider: gp } = await import('../src/providers/index.js');
         const colonIdx = value.indexOf(':');
+
         if (colonIdx === -1) {
-          console.error(`  ❌ 형식: --add-source "프로바이더:경로"  예: "openai:/path/to/logs"`);
-          console.error(`     지원 프로바이더: ${getProviderNames().join(', ')}`);
-          process.exit(1);
+          // API 기반 프로바이더 (경로 불필요, 예: "cursor")
+          const provider = gp(value);
+          if (!provider) {
+            console.error(`  ❌ 알 수 없는 프로바이더: ${value}. 지원: ${getProviderNames().join(', ')}`);
+            process.exit(1);
+          }
+          if (provider.isApiProvider) {
+            if (!provider.isAvailable?.()) {
+              console.error(`  ❌ ${provider.displayName}이(가) 설치되어 있지 않습니다.`);
+              process.exit(1);
+            }
+            if (!provider.getSessionToken?.()) {
+              console.error(`  ❌ ${provider.displayName} 인증 토큰을 찾을 수 없습니다. 로그인 상태를 확인하세요.`);
+              process.exit(1);
+            }
+            const cfg3 = loadConfig();
+            const sources = (cfg3.logSources || []).filter(s => s.provider !== value);
+            sources.push({ provider: value });
+            updateConfig({ logSources: sources });
+            showConfigUpdate('로그 소스 추가', `${provider.emoji} ${provider.displayName} (API 폴링)`);
+          } else {
+            console.error(`  ❌ 형식: --add-source "프로바이더:경로"  예: "openai:/path/to/logs"`);
+            console.error(`     API 기반: --add-source cursor`);
+            console.error(`     지원 프로바이더: ${getProviderNames().join(', ')}`);
+            process.exit(1);
+          }
+          i += 2;
+          break;
         }
+
+        // 파일 기반 프로바이더 (경로 필요)
         const srcProvider = value.slice(0, colonIdx);
         const srcPath = value.slice(colonIdx + 1);
         if (!getProviderNames().includes(srcProvider)) {
@@ -239,12 +270,14 @@ if (command === 'config') {
     --currency <코드>          표시 통화 (USD, KRW, JPY, EUR, GBP, CNY)
     --exchange-rate <숫자|auto> 환율 수동 고정. 자동: --exchange-rate auto
     --add-source "프로바이더:경로"  로그 소스 추가 (openai, google)
+    --add-source cursor            Cursor IDE 사용량 추적 (API 폴링)
     --remove-source <프로바이더>    로그 소스 삭제
   
   예시:
     claude-cost-cry config --daily-budget 10
     claude-cost-cry config --unit 치킨
     claude-cost-cry config --currency KRW
+    claude-cost-cry config --add-source cursor
     claude-cost-cry config --add-source "openai:/path/to/api-logs"
   `);
 } else {

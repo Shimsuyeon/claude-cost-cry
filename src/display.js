@@ -116,7 +116,9 @@ export function showCostUpdate(usage, cost, totalCost, config, exchange) {
 
   const modelLabel = resolveModelLabel(usage);
   const pEmoji = providerTag(usage.provider);
-  const modelColor = /opus/i.test(modelLabel) ? chalk.magenta
+  const isCursor = usage.provider === 'cursor';
+  const modelColor = isCursor ? chalk.hex('#06b6d4')
+    : /opus/i.test(modelLabel) ? chalk.magenta
     : /haiku/i.test(modelLabel) ? chalk.green
     : /gpt/i.test(modelLabel) ? chalk.hex('#74aa9c')
     : /gemini/i.test(modelLabel) ? chalk.hex('#4285f4')
@@ -176,8 +178,12 @@ export function showTopExpensive(topRequests, exchange) {
   topRequests.forEach((req, i) => {
     const medal = ['🥇', '🥈', '🥉'][i];
     const pEmoji = req.providerEmoji ? `${req.providerEmoji} ` : '';
-    const modelColor = /opus/i.test(req.model) ? chalk.magenta
-      : /haiku/i.test(req.model) ? chalk.green : chalk.blue;
+    const modelColor = req.provider === 'cursor' ? chalk.hex('#06b6d4')
+      : /opus/i.test(req.model) ? chalk.magenta
+      : /haiku/i.test(req.model) ? chalk.green
+      : /gpt/i.test(req.model) ? chalk.hex('#74aa9c')
+      : /gemini/i.test(req.model) ? chalk.hex('#4285f4')
+      : chalk.blue;
     const timeStr = req.time || '';
 
     console.log(`  ${medal} ${chalk.bold.yellow(fc(req.cost, exchange))}  ${pEmoji}${modelColor(req.model)}  ${chalk.gray(timeStr)}`);

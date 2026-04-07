@@ -1,8 +1,9 @@
 import claude from './claude.js';
 import openai from './openai.js';
 import google from './google.js';
+import cursor from './cursor.js';
 
-const PROVIDERS = { claude, openai, google };
+const PROVIDERS = { claude, openai, google, cursor };
 
 export function getProvider(name) {
   return PROVIDERS[name] || null;

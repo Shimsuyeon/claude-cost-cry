@@ -4,7 +4,7 @@ import { loadConfig, getBudgetStatus } from './config.js';
 import { showBanner, showTodaySummary, showCostUpdate, showBudgetAlert, showShutdown, showError, showInfo } from './display.js';
 import { scanToday, startWatching, getClaudeProjectsDir, buildLogSources } from './watcher.js';
 import { getExchangeRate } from './exchange.js';
-import { getModelLabel, getProviderEmoji, getProviderDisplayName } from './providers/index.js';
+import { getModelLabel, getProviderEmoji, getProviderDisplayName, getProvider } from './providers/index.js';
 
 function truncatePrompt(text, maxLen = 30) {
   if (!text) return null;
@@ -53,6 +53,13 @@ export async function main() {
     .map(p => `${getProviderEmoji(p)} ${getProviderDisplayName(p)}`)
     .join(' + ');
   showInfo(`추적 중: ${sourceInfo}`);
+
+  // Cursor 설치 감지 → 아직 설정 안 됐으면 안내
+  const cursorProvider = getProvider('cursor');
+  if (cursorProvider?.isAvailable?.() && !providerNames.includes('cursor')) {
+    showInfo('💡 Cursor IDE가 감지됨! 추적하려면: claude-cost-cry config --add-source cursor');
+  }
+
   showInfo('오늘의 사용량을 스캔하는 중...');
 
   const exchange = await getExchangeRate(config);

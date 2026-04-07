@@ -89,6 +89,7 @@ const PROVIDER_META = {
   claude: { emoji: '🟣', displayName: 'Claude' },
   openai: { emoji: '🟢', displayName: 'OpenAI' },
   google: { emoji: '🔵', displayName: 'Gemini' },
+  cursor: { emoji: '⚡', displayName: 'Cursor' },
 };
 
 function getModelLabelLocal(usage) {
@@ -144,6 +145,13 @@ function getNudgeInfo(usage, cost) {
     models = { opus: { input: 15, output: 75 }, sonnet: { input: 3, output: 15 }, haiku: { input: 0.8, output: 4 } };
   } else if (provider === 'openai') {
     models = { 'gpt-4o': { input: 2.5, output: 10 }, 'gpt-4o-mini': { input: 0.15, output: 0.6 }, 'o3-mini': { input: 1.1, output: 4.4 } };
+  } else if (provider === 'cursor') {
+    models = {
+      'claude-4-sonnet': { input: 3, output: 15 },
+      'gpt-4o': { input: 2.5, output: 10 },
+      'gpt-4o-mini': { input: 0.15, output: 0.6 },
+      'gemini-2.0-flash': { input: 0.1, output: 0.4 },
+    };
   } else {
     return null;
   }
