@@ -16,17 +16,13 @@
 
   .widget {
     width: 260px;
-    height: 100px;
     margin: 10px;
     background: rgba(20, 20, 28, 0.88);
     border-radius: 18px;
     border: 1px solid rgba(255, 255, 255, 0.08);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
-    display: flex;
-    align-items: center;
-    padding: 0 16px;
-    gap: 14px;
+    padding: 14px 16px;
     transition: background 0.3s ease, border-color 0.3s ease;
     overflow: hidden;
     position: relative;
@@ -42,16 +38,13 @@
     pointer-events: none;
   }
 
-  .widget.pulse::before {
-    animation: pulse-glow 0.6s ease-out;
-  }
+  .widget.pulse::before { animation: pulse-glow 0.6s ease-out; }
 
   @keyframes pulse-glow {
     0% { opacity: 1; box-shadow: inset 0 0 20px rgba(255, 180, 50, 0.3); }
     100% { opacity: 0; }
   }
 
-  /* Tier-based border glow */
   .widget.tier-peace { border-color: rgba(100, 200, 100, 0.2); }
   .widget.tier-uneasy { border-color: rgba(255, 200, 50, 0.25); }
   .widget.tier-worry { border-color: rgba(255, 140, 30, 0.3); }
@@ -59,20 +52,23 @@
   .widget.tier-danger { border-color: rgba(200, 30, 30, 0.4); }
   .widget.tier-funeral { border-color: rgba(120, 50, 180, 0.4); }
 
+  .main-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
   .emoji-container {
     flex-shrink: 0;
-    width: 44px;
-    height: 44px;
+    width: 40px;
+    height: 40px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 30px;
-    transition: transform 0.3s ease;
+    font-size: 28px;
   }
 
-  .emoji-container.bounce {
-    animation: emoji-bounce 0.5s ease;
-  }
+  .emoji-container.bounce { animation: emoji-bounce 0.5s ease; }
 
   @keyframes emoji-bounce {
     0% { transform: scale(1); }
@@ -82,10 +78,7 @@
     100% { transform: scale(1); }
   }
 
-  .info {
-    flex: 1;
-    min-width: 0;
-  }
+  .info { flex: 1; min-width: 0; }
 
   .cost-line {
     display: flex;
@@ -94,7 +87,7 @@
   }
 
   .cost {
-    font-size: 26px;
+    font-size: 24px;
     font-weight: 700;
     color: #fff;
     letter-spacing: -0.5px;
@@ -102,16 +95,13 @@
   }
 
   .delta {
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 500;
     color: rgba(255, 120, 80, 0.9);
     opacity: 0;
-    transition: opacity 0.3s ease;
   }
 
-  .delta.show {
-    animation: delta-flash 2s ease-out forwards;
-  }
+  .delta.show { animation: delta-flash 2s ease-out forwards; }
 
   @keyframes delta-flash {
     0% { opacity: 1; transform: translateY(0); }
@@ -120,12 +110,9 @@
   }
 
   .equiv {
-    font-size: 12px;
+    font-size: 11px;
     color: rgba(255, 255, 255, 0.5);
-    margin-top: 2px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    margin-top: 1px;
   }
 
   .calls {
@@ -134,7 +121,96 @@
     margin-top: 1px;
   }
 
-  /* Tier colors for cost text */
+  /* Toolbar buttons */
+  .toolbar {
+    position: absolute;
+    top: 10px;
+    right: 12px;
+    display: flex;
+    gap: 4px;
+    z-index: 10;
+  }
+
+  .tool-btn {
+    width: 22px;
+    height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.25);
+    cursor: pointer;
+    border-radius: 50%;
+    transition: color 0.2s, background 0.2s;
+    -webkit-app-region: no-drag;
+  }
+
+  .tool-btn:hover {
+    color: rgba(255, 255, 255, 0.7);
+    background: rgba(255, 255, 255, 0.08);
+  }
+
+  .tool-btn.active {
+    color: rgba(100, 200, 255, 0.9);
+    background: rgba(100, 200, 255, 0.12);
+  }
+
+  /* Budget bar */
+  .budget-section {
+    margin-top: 8px;
+    display: none;
+  }
+
+  .budget-section.visible { display: block; }
+
+  .budget-bar-bg {
+    width: 100%;
+    height: 6px;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+
+  .budget-bar-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.4s ease, background 0.3s ease;
+    width: 0%;
+    background: #8be88b;
+  }
+
+  .budget-bar-fill.warning { background: #ffd966; }
+  .budget-bar-fill.danger { background: #ff5555; }
+  .budget-bar-fill.exceeded { background: #ff2222; }
+
+  .budget-label {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 3px;
+    font-size: 9px;
+    color: rgba(255, 255, 255, 0.35);
+  }
+
+  /* Nudge */
+  .nudge {
+    margin-top: 6px;
+    font-size: 10px;
+    color: rgba(100, 200, 255, 0.7);
+    opacity: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .nudge.show { animation: nudge-fade 3s ease-out forwards; }
+
+  @keyframes nudge-fade {
+    0% { opacity: 1; }
+    70% { opacity: 0.8; }
+    100% { opacity: 0; }
+  }
+
+  /* Tier cost colors */
   .tier-peace .cost { color: #8be88b; }
   .tier-uneasy .cost { color: #ffd966; }
   .tier-worry .cost { color: #ff9944; }
@@ -142,10 +218,7 @@
   .tier-danger .cost { color: #ff2222; }
   .tier-funeral .cost { color: #bb66ff; }
 
-  /* Shake animation for high tiers */
-  .widget.shake {
-    animation: widget-shake 0.4s ease;
-  }
+  .widget.shake { animation: widget-shake 0.4s ease; }
 
   @keyframes widget-shake {
     0%, 100% { transform: translateX(0); }
@@ -154,19 +227,241 @@
     60% { transform: translateX(-2px); }
     80% { transform: translateX(2px); }
   }
+
+  /* ── Expandable panels (shared) ── */
+  .panel {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease, margin-top 0.3s ease, opacity 0.25s ease;
+    opacity: 0;
+    -webkit-app-region: no-drag;
+  }
+
+  .panel.open {
+    margin-top: 12px;
+    opacity: 1;
+  }
+
+  .panel-divider {
+    height: 1px;
+    background: rgba(255, 255, 255, 0.08);
+    margin-bottom: 10px;
+  }
+
+  /* ── Settings panel ── */
+  .settings-panel.open { max-height: 200px; }
+
+  .setting-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
+
+  .setting-label {
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.6);
+  }
+
+  .setting-input {
+    width: 80px;
+    height: 26px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    color: #fff;
+    font-size: 12px;
+    padding: 0 8px;
+    outline: none;
+    font-family: inherit;
+    transition: border-color 0.2s;
+  }
+
+  .setting-input:focus { border-color: rgba(100, 200, 255, 0.4); }
+  .setting-input::placeholder { color: rgba(255, 255, 255, 0.2); }
+
+  .toggle {
+    position: relative;
+    width: 36px;
+    height: 20px;
+    cursor: pointer;
+  }
+
+  .toggle input { opacity: 0; width: 0; height: 0; }
+
+  .toggle-track {
+    position: absolute;
+    inset: 0;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    transition: background 0.2s;
+  }
+
+  .toggle input:checked + .toggle-track { background: rgba(100, 200, 255, 0.5); }
+
+  .toggle-thumb {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 16px;
+    height: 16px;
+    background: #fff;
+    border-radius: 50%;
+    transition: transform 0.2s;
+    pointer-events: none;
+  }
+
+  .toggle input:checked ~ .toggle-thumb { transform: translateX(16px); }
+
+  .save-btn {
+    width: 100%;
+    height: 28px;
+    background: rgba(100, 200, 255, 0.15);
+    border: 1px solid rgba(100, 200, 255, 0.25);
+    border-radius: 8px;
+    color: rgba(100, 200, 255, 0.9);
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.1s;
+    font-family: inherit;
+    margin-top: 2px;
+  }
+
+  .save-btn:hover { background: rgba(100, 200, 255, 0.25); }
+  .save-btn:active { transform: scale(0.97); }
+
+  .save-btn.saved {
+    background: rgba(100, 200, 100, 0.2);
+    border-color: rgba(100, 200, 100, 0.3);
+    color: rgba(100, 200, 100, 0.9);
+  }
+
+  /* ── TOP 3 panel ── */
+  .top-panel.open { max-height: 220px; }
+
+  .top-panel-title {
+    font-size: 11px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.5);
+    margin-bottom: 8px;
+  }
+
+  .top-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+  }
+
+  .top-medal {
+    font-size: 14px;
+    width: 20px;
+    text-align: center;
+    flex-shrink: 0;
+  }
+
+  .top-cost {
+    font-size: 13px;
+    font-weight: 700;
+    color: #ffd966;
+    min-width: 52px;
+  }
+
+  .top-model {
+    font-size: 10px;
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-weight: 600;
+  }
+
+  .top-model.opus { background: rgba(180, 100, 255, 0.2); color: rgba(200, 140, 255, 0.9); }
+  .top-model.sonnet { background: rgba(80, 140, 255, 0.2); color: rgba(120, 170, 255, 0.9); }
+  .top-model.haiku { background: rgba(80, 200, 120, 0.2); color: rgba(120, 220, 150, 0.9); }
+
+  .top-time {
+    font-size: 9px;
+    color: rgba(255, 255, 255, 0.25);
+    margin-left: auto;
+  }
+
+  .top-prompt {
+    font-size: 9px;
+    color: rgba(255, 255, 255, 0.4);
+    margin-left: 28px;
+    margin-top: -2px;
+    margin-bottom: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .top-empty {
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.3);
+    text-align: center;
+    padding: 12px 0;
+  }
 </style>
 </head>
 <body>
 
 <div class="widget tier-peace" id="widget">
-  <div class="emoji-container" id="emoji">🪙</div>
-  <div class="info">
-    <div class="cost-line">
-      <span class="cost" id="cost">$0.00</span>
-      <span class="delta" id="delta"></span>
+  <div class="toolbar">
+    <div class="tool-btn" id="topBtn" title="비싼 요청 TOP 3">🏆</div>
+    <div class="tool-btn" id="gearBtn" title="설정">⚙</div>
+  </div>
+
+  <div class="main-row">
+    <div class="emoji-container" id="emoji">🪙</div>
+    <div class="info">
+      <div class="cost-line">
+        <span class="cost" id="cost">$0.00</span>
+        <span class="delta" id="delta"></span>
+      </div>
+      <div class="equiv" id="equiv">지갑이 평화롭습니다</div>
+      <div class="calls" id="calls"></div>
     </div>
-    <div class="equiv" id="equiv">지갑이 평화롭습니다</div>
-    <div class="calls" id="calls"></div>
+  </div>
+
+  <div class="budget-section" id="budgetSection">
+    <div class="budget-bar-bg">
+      <div class="budget-bar-fill" id="budgetFill"></div>
+    </div>
+    <div class="budget-label">
+      <span id="budgetUsed">$0</span>
+      <span id="budgetTotal">$0</span>
+    </div>
+  </div>
+
+  <div class="nudge" id="nudge"></div>
+
+  <!-- TOP 3 Panel -->
+  <div class="panel top-panel" id="topPanel">
+    <div class="panel-divider"></div>
+    <div class="top-panel-title">🏆 오늘의 가장 비싼 요청</div>
+    <div id="topList"></div>
+  </div>
+
+  <!-- Settings Panel -->
+  <div class="panel settings-panel" id="settingsPanel">
+    <div class="panel-divider"></div>
+
+    <div class="setting-row">
+      <span class="setting-label">일일 예산 ($)</span>
+      <input type="text" class="setting-input" id="budgetInput" placeholder="미설정">
+    </div>
+
+    <div class="setting-row">
+      <span class="setting-label">절약 넛지</span>
+      <label class="toggle">
+        <input type="checkbox" id="nudgeToggle" checked>
+        <div class="toggle-track"></div>
+        <div class="toggle-thumb"></div>
+      </label>
+    </div>
+
+    <button class="save-btn" id="saveBtn">저장</button>
   </div>
 </div>
 
@@ -177,6 +472,22 @@
   const deltaEl = document.getElementById('delta');
   const equivEl = document.getElementById('equiv');
   const callsEl = document.getElementById('calls');
+  const budgetSection = document.getElementById('budgetSection');
+  const budgetFill = document.getElementById('budgetFill');
+  const budgetUsed = document.getElementById('budgetUsed');
+  const budgetTotal = document.getElementById('budgetTotal');
+  const nudgeEl = document.getElementById('nudge');
+  const gearBtn = document.getElementById('gearBtn');
+  const topBtn = document.getElementById('topBtn');
+  const settingsPanel = document.getElementById('settingsPanel');
+  const topPanel = document.getElementById('topPanel');
+  const topList = document.getElementById('topList');
+  const budgetInput = document.getElementById('budgetInput');
+  const nudgeToggle = document.getElementById('nudgeToggle');
+  const saveBtn = document.getElementById('saveBtn');
+
+  let activePanel = null; // 'settings' | 'top' | null
+  let latestData = {};
 
   function formatCost(cost) {
     if (cost < 0.01) return `$${cost.toFixed(4)}`;
@@ -184,22 +495,131 @@
     return `$${cost.toFixed(2)}`;
   }
 
+  function escapeHtml(str) {
+    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function formatTokens(n) {
+    if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+    if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
+    return String(n);
+  }
+
+  // ── Panel toggle ──
+
+  function closeAllPanels() {
+    settingsPanel.classList.remove('open');
+    topPanel.classList.remove('open');
+    gearBtn.classList.remove('active');
+    topBtn.classList.remove('active');
+    activePanel = null;
+    window.bridge.resizeWidget(false);
+  }
+
+  function openPanel(name) {
+    closeAllPanels();
+    activePanel = name;
+
+    if (name === 'settings') {
+      settingsPanel.classList.add('open');
+      gearBtn.classList.add('active');
+    } else if (name === 'top') {
+      topPanel.classList.add('open');
+      topBtn.classList.add('active');
+      renderTopList();
+    }
+
+    window.bridge.resizeWidget(true);
+  }
+
+  gearBtn.addEventListener('click', async () => {
+    if (activePanel === 'settings') {
+      closeAllPanels();
+      return;
+    }
+    const cfg = await window.bridge.getConfig();
+    budgetInput.value = cfg.dailyBudget || '';
+    nudgeToggle.checked = cfg.showNudge !== false;
+    saveBtn.textContent = '저장';
+    saveBtn.classList.remove('saved');
+    openPanel('settings');
+  });
+
+  topBtn.addEventListener('click', () => {
+    if (activePanel === 'top') {
+      closeAllPanels();
+      return;
+    }
+    openPanel('top');
+  });
+
+  // ── TOP 3 rendering ──
+
+  function renderTopList() {
+    const items = latestData.topRequests || [];
+    if (items.length === 0) {
+      topList.innerHTML = '<div class="top-empty">아직 요청이 없습니다</div>';
+      return;
+    }
+
+    const medals = ['🥇', '🥈', '🥉'];
+    topList.innerHTML = items.map((req, i) => {
+      const modelKey = req.model.toLowerCase();
+      const modelClass = modelKey === 'opus' ? 'opus' : modelKey === 'haiku' ? 'haiku' : 'sonnet';
+      const promptHtml = req.prompt
+        ? `<div class="top-prompt">💬 ${escapeHtml(req.prompt)}</div>`
+        : '';
+      return `
+        <div class="top-item">
+          <span class="top-medal">${medals[i]}</span>
+          <span class="top-cost">${formatCost(req.cost)}</span>
+          <span class="top-model ${modelClass}">${req.model}</span>
+          <span class="top-time">${req.time || ''}</span>
+        </div>
+        ${promptHtml}
+      `;
+    }).join('');
+  }
+
+  // ── Settings save ──
+
+  saveBtn.addEventListener('click', async () => {
+    const budgetVal = budgetInput.value.trim();
+    const updates = {
+      dailyBudget: budgetVal === '' ? null : parseFloat(budgetVal),
+      showNudge: nudgeToggle.checked,
+    };
+
+    if (updates.dailyBudget !== null && isNaN(updates.dailyBudget)) {
+      budgetInput.style.borderColor = 'rgba(255, 80, 80, 0.6)';
+      setTimeout(() => { budgetInput.style.borderColor = ''; }, 1500);
+      return;
+    }
+
+    await window.bridge.saveConfig(updates);
+
+    saveBtn.textContent = '✓ 저장됨';
+    saveBtn.classList.add('saved');
+    setTimeout(() => {
+      saveBtn.textContent = '저장';
+      saveBtn.classList.remove('saved');
+    }, 1500);
+  });
+
+  // ── Display ──
+
   function updateDisplay(data) {
-    // Update tier class
+    latestData = data;
+
     widget.className = 'widget';
-    if (data.tier) {
-      widget.classList.add(`tier-${data.tier.level}`);
-    }
+    if (data.tier) widget.classList.add(`tier-${data.tier.level}`);
 
-    // Update emoji
-    if (data.tier) {
-      emojiEl.textContent = data.tier.emoji;
-    }
+    if (activePanel === 'settings') gearBtn.classList.add('active');
+    if (activePanel === 'top') topBtn.classList.add('active');
 
-    // Update cost
+    if (data.tier) emojiEl.textContent = data.tier.emoji;
     costEl.textContent = formatCost(data.totalCost);
 
-    // Update equivalent
     if (data.equivalent) {
       equivEl.textContent = `${data.equivalent.emoji} ${data.equivalent.name} ${data.equivalent.count}잔`;
     } else if (data.totalCost === 0) {
@@ -208,44 +628,56 @@
       equivEl.textContent = '아직은 괜찮아...';
     }
 
-    // Update call count
-    if (data.callCount > 0) {
-      callsEl.textContent = `오늘 ${data.callCount}건`;
+    if (data.callCount > 0) callsEl.textContent = `오늘 ${data.callCount}건`;
+
+    if (data.budget) {
+      budgetSection.classList.add('visible');
+      const pct = Math.round(data.budget.ratio * 100);
+      budgetFill.style.width = `${pct}%`;
+      budgetFill.className = 'budget-bar-fill';
+      if (data.budget.status === 'exceeded') budgetFill.classList.add('exceeded');
+      else if (data.budget.status === 'danger') budgetFill.classList.add('danger');
+      else if (data.budget.status === 'warning') budgetFill.classList.add('warning');
+      budgetUsed.textContent = formatCost(data.totalCost);
+      budgetTotal.textContent = formatCost(data.budget.budget);
+    } else {
+      budgetSection.classList.remove('visible');
     }
+
+    if (activePanel === 'top') renderTopList();
   }
 
   function animateUpdate(data) {
-    // Emoji bounce
     emojiEl.classList.remove('bounce');
     void emojiEl.offsetWidth;
     emojiEl.classList.add('bounce');
 
-    // Widget pulse
     widget.classList.remove('pulse');
     void widget.offsetWidth;
     widget.classList.add('pulse');
 
-    // Shake for high cost updates
     if (data.tier && ['alert', 'danger', 'funeral'].includes(data.tier.level)) {
       widget.classList.remove('shake');
       void widget.offsetWidth;
       widget.classList.add('shake');
     }
 
-    // Delta flash
     if (data.deltaCost) {
       deltaEl.textContent = `+${formatCost(data.deltaCost)}`;
       deltaEl.classList.remove('show');
       void deltaEl.offsetWidth;
       deltaEl.classList.add('show');
     }
+
+    if (data.nudge) {
+      nudgeEl.textContent = `💡 ${data.nudge.model}로 했으면 ${formatCost(data.nudge.saving)} 절약`;
+      nudgeEl.classList.remove('show');
+      void nudgeEl.offsetWidth;
+      nudgeEl.classList.add('show');
+    }
   }
 
-  // IPC handlers
-  window.bridge.onInitialData((data) => {
-    updateDisplay(data);
-  });
-
+  window.bridge.onInitialData((data) => updateDisplay(data));
   window.bridge.onCostUpdate((data) => {
     updateDisplay(data);
     animateUpdate(data);

@@ -1,7 +1,35 @@
 import { existsSync } from 'node:fs';
-import { calculateCost } from './calculator.js';
-import { showBanner, showTodaySummary, showCostUpdate, showShutdown, showError, showInfo } from './display.js';
+import { calculateCost, getSavingsNudge } from './calculator.js';
+import { loadConfig, getBudgetStatus } from './config.js';
+import { showBanner, showTodaySummary, showCostUpdate, showBudgetAlert, showShutdown, showError, showInfo } from './display.js';
 import { scanToday, startWatching, getClaudeProjectsDir } from './watcher.js';
+import { getModelLabel } from './pricing.js';
+
+function truncatePrompt(text, maxLen = 30) {
+  if (!text) return null;
+  const clean = text.replace(/\s+/g, ' ').trim();
+  if (clean.length <= maxLen) return clean;
+  return clean.slice(0, maxLen - 1) + '…';
+}
+
+function recordRequest(topRequests, usage, cost) {
+  const totalInput = usage.inputTokens + usage.cacheCreationTokens + usage.cacheReadTokens;
+  const time = usage.timestamp
+    ? new Date(usage.timestamp).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })
+    : '';
+
+  topRequests.push({
+    cost,
+    model: getModelLabel(usage.model),
+    time,
+    inputTokens: totalInput,
+    outputTokens: usage.outputTokens,
+    prompt: truncatePrompt(usage.prompt),
+  });
+
+  topRequests.sort((a, b) => b.cost - a.cost);
+  if (topRequests.length > 3) topRequests.length = 3;
+}
 
 export async function main() {
   showBanner();
@@ -13,30 +41,55 @@ export async function main() {
     process.exit(1);
   }
 
+  const config = loadConfig();
+
   showInfo('오늘의 사용량을 스캔하는 중...');
 
   const { usages: todayUsages, fileOffsets } = await scanToday();
 
   let totalCost = 0;
   let callCount = todayUsages.length;
+  let totalPotentialSavings = 0;
+  const topRequests = [];
 
   for (const usage of todayUsages) {
-    totalCost += calculateCost(usage);
+    const cost = calculateCost(usage);
+    totalCost += cost;
+    recordRequest(topRequests, usage, cost);
+    const nudge = getSavingsNudge(usage, cost);
+    if (nudge) totalPotentialSavings += nudge.saving;
   }
 
   if (process.stdout.isTTY) {
     process.stdout.write('\x1B[1A\x1B[2K');
   }
 
-  showTodaySummary(totalCost, callCount);
+  const budgetStatus = getBudgetStatus(totalCost, config.dailyBudget);
+  showTodaySummary(totalCost, callCount, budgetStatus);
 
-  // 실시간 감시 시작
   const sessionStartCost = totalCost;
+  let lastBudgetStatus = budgetStatus.status;
+
   const watcher = startWatching(fileOffsets, (usage) => {
     const cost = calculateCost(usage);
     totalCost += cost;
     callCount++;
-    showCostUpdate(usage, cost, totalCost);
+
+    recordRequest(topRequests, usage, cost);
+
+    const nudge = getSavingsNudge(usage, cost);
+    if (nudge) totalPotentialSavings += nudge.saving;
+
+    showCostUpdate(usage, cost, totalCost, config);
+
+    if (config.dailyBudget) {
+      const newBudgetStatus = getBudgetStatus(totalCost, config.dailyBudget);
+      if (newBudgetStatus.status !== lastBudgetStatus &&
+          (newBudgetStatus.status === 'danger' || newBudgetStatus.status === 'exceeded')) {
+        showBudgetAlert(newBudgetStatus);
+      }
+      lastBudgetStatus = newBudgetStatus.status;
+    }
   });
 
   if (!watcher) {
@@ -46,7 +99,7 @@ export async function main() {
 
   const shutdown = () => {
     const sessionCost = totalCost - sessionStartCost;
-    showShutdown(sessionCost);
+    showShutdown(sessionCost, totalCost, totalPotentialSavings, topRequests);
     watcher.close();
     process.exit(0);
   };

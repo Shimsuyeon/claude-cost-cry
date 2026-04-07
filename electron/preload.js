@@ -5,4 +5,8 @@ contextBridge.exposeInMainWorld('bridge', {
   onInitialData: (fn) => ipcRenderer.on('initial-data', (_e, data) => fn(data)),
   hideOverlay: () => ipcRenderer.send('hide-overlay'),
   startDrag: () => ipcRenderer.send('start-drag'),
+
+  getConfig: () => ipcRenderer.invoke('get-config'),
+  saveConfig: (updates) => ipcRenderer.invoke('save-config', updates),
+  resizeWidget: (expanded) => ipcRenderer.send('resize-widget', expanded),
 });

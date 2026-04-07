@@ -48,3 +48,28 @@ export function parseAndExtract(line) {
   if (!entry) return null;
   return extractUsage(entry);
 }
+
+/**
+ * user 타입 메시지에서 실제 사용자 텍스트를 추출한다.
+ * tool_result만 있는 메시지는 null을 반환한다.
+ */
+export function extractUserText(entry) {
+  if (entry?.type !== 'user') return null;
+
+  const content = entry.message?.content;
+  if (typeof content === 'string') {
+    const clean = content.replace(/<[^>]*>/gs, '').trim();
+    return clean.length > 3 ? clean : null;
+  }
+
+  if (Array.isArray(content)) {
+    for (const block of content) {
+      if (block.type === 'text') {
+        const clean = block.text.replace(/<[^>]*>/gs, '').trim();
+        if (clean.length > 3) return clean;
+      }
+    }
+  }
+
+  return null;
+}

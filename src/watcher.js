@@ -3,7 +3,7 @@ import { readFile, stat } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
-import { parseAndExtract } from './parser.js';
+import { parseLine, extractUsage, extractUserText } from './parser.js';
 
 const CLAUDE_DIR = join(homedir(), '.claude', 'projects');
 
@@ -12,9 +12,31 @@ export function getClaudeProjectsDir() {
 }
 
 /**
- * 기존 JSONL 로그에서 오늘의 사용량을 스캔한다.
- * 오늘 자정(UTC 기준) 이후의 엔트리만 추출.
+ * 파일 내용의 모든 라인을 파싱하면서, 각 assistant usage에
+ * 직전 사용자 프롬프트(tool_result는 건너뜀)를 붙인다.
  */
+function parseWithPrompts(content) {
+  const lines = content.split('\n');
+  const usages = [];
+  let lastUserText = null;
+
+  for (const line of lines) {
+    const entry = parseLine(line);
+    if (!entry) continue;
+
+    const userText = extractUserText(entry);
+    if (userText) lastUserText = userText;
+
+    const usage = extractUsage(entry);
+    if (usage) {
+      usage.prompt = lastUserText;
+      usages.push(usage);
+    }
+  }
+
+  return usages;
+}
+
 export async function scanToday() {
   if (!existsSync(CLAUDE_DIR)) {
     return { usages: [], fileOffsets: new Map() };
@@ -32,11 +54,7 @@ export async function scanToday() {
       const fileSize = Buffer.byteLength(content, 'utf-8');
       fileOffsets.set(filePath, fileSize);
 
-      const lines = content.split('\n');
-      for (const line of lines) {
-        const usage = parseAndExtract(line);
-        if (!usage) continue;
-
+      for (const usage of parseWithPrompts(content)) {
         const entryTime = new Date(usage.timestamp).getTime();
         if (entryTime >= todayStart) {
           usages.push(usage);
@@ -50,10 +68,9 @@ export async function scanToday() {
   return { usages, fileOffsets };
 }
 
-/**
- * JSONL 파일들을 실시간으로 감시한다.
- * 새 로그가 추가되면 콜백을 호출한다.
- */
+// 파일별로 마지막 사용자 프롬프트를 추적
+const lastPromptByFile = new Map();
+
 export function startWatching(fileOffsets, onNewUsage) {
   if (!existsSync(CLAUDE_DIR)) {
     return null;
@@ -86,14 +103,20 @@ export function startWatching(fileOffsets, onNewUsage) {
       const fullBytes = Buffer.byteLength(content, 'utf-8');
       fileOffsets.set(filePath, fullBytes);
 
-      // 바이트 오프셋 기준으로 새 부분만 추출
       const contentBuffer = Buffer.from(content, 'utf-8');
       const newContent = contentBuffer.slice(currentOffset).toString('utf-8');
       const lines = newContent.split('\n');
 
       for (const line of lines) {
-        const usage = parseAndExtract(line);
+        const entry = parseLine(line);
+        if (!entry) continue;
+
+        const userText = extractUserText(entry);
+        if (userText) lastPromptByFile.set(filePath, userText);
+
+        const usage = extractUsage(entry);
         if (usage) {
+          usage.prompt = lastPromptByFile.get(filePath) || null;
           onNewUsage(usage);
         }
       }

@@ -56,3 +56,42 @@ export function formatTokenCount(n) {
   if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
   return String(n);
 }
+
+/**
+ * 같은 요청을 다른 모델로 했을 때의 비용을 계산한다.
+ * 토큰 수는 동일하다고 가정 (모델 간 토큰화 차이는 무시).
+ */
+export function calculateAlternativeCosts(usage) {
+  const models = ['opus', 'sonnet', 'haiku'];
+  const results = {};
+
+  for (const modelKey of models) {
+    const pricing = getPricing(modelKey);
+    const totalInput = usage.inputTokens + usage.cacheCreationTokens + usage.cacheReadTokens;
+    const cost = (totalInput / 1_000_000) * pricing.input
+               + (usage.outputTokens / 1_000_000) * pricing.output;
+    results[modelKey] = { cost, label: pricing.label };
+  }
+
+  return results;
+}
+
+/**
+ * 현재 모델 대비 가장 저렴한 대안의 절약 금액을 계산한다.
+ */
+export function getSavingsNudge(usage, actualCost) {
+  const alts = calculateAlternativeCosts(usage);
+  const currentModel = getPricing(usage.model).label.toLowerCase();
+
+  let bestSaving = null;
+
+  for (const [key, alt] of Object.entries(alts)) {
+    if (key === currentModel) continue;
+    const saving = actualCost - alt.cost;
+    if (saving > 0.001 && (!bestSaving || saving > bestSaving.saving)) {
+      bestSaving = { model: alt.label, cost: alt.cost, saving };
+    }
+  }
+
+  return bestSaving;
+}

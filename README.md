@@ -77,6 +77,40 @@ claude-cost-cry --overlay
 
 > macOS에서 처음 실행 시 `xattr -cr node_modules/electron/dist/Electron.app` 실행이 필요할 수 있습니다.
 
+### 예산 설정
+
+```bash
+# 일일 예산 $10 설정
+claude-cost-cry config --daily-budget 10
+
+# 현재 설정 보기
+claude-cost-cry config
+
+# 예산 해제
+claude-cost-cry config --daily-budget off
+
+# 절약 넛지 끄기
+claude-cost-cry config --nudge off
+```
+
+예산을 설정하면:
+- CLI에 프로그레스 바로 예산 사용률 표시
+- 70% 도달 시 💡 경고, 90% 시 ⚠️ 경고, 100% 초과 시 🚫 경고
+- 오버레이 위젯에도 예산 바가 표시됩니다
+
+### 절약 넛지
+
+API 호출 시 더 저렴한 모델을 썼으면 얼마를 아낄 수 있었는지 실시간으로 보여줍니다.
+
+```
+  [14:32:15] Opus  📥 15.2K 📤 1.2K
+  🔥 +$0.38  →  누적: $8.73  🍗 0.5잔
+     "이 돈이면 치킨 반 마리는 됐는데..."
+     💡 Haiku로 했으면 $0.02 ($0.36 절약)
+```
+
+종료 시 총 절약 가능 금액도 요약해 줍니다.
+
 ## 작동 원리
 
 Claude Code는 모든 API 호출 로그를 `~/.claude/projects/` 아래에 JSONL 파일로 저장합니다. claude-cost-cry는 이 로그 파일을 실시간으로 감시하며:
@@ -105,7 +139,8 @@ Claude Code는 모든 API 호출 로그를 `~/.claude/projects/` 아래에 JSONL
 ## 로드맵
 
 - [x] v0.1 — Claude Code JSONL 로그 파싱 + 실시간 비용 추적 + 화면 오버레이 위젯
-- [ ] v0.2 — 효과음, 터미널 애니메이션, 다국어/다통화 지원
+- [x] v0.2 — 예산 한도 설정/경고 + 모델별 절약 넛지 + config 커맨드
+- [ ] v0.3 — 효과음, 터미널 애니메이션, 다국어/다통화 지원
 - [ ] v0.3 — 일일 리포트, SNS 공유용 이미지 내보내기
 - [ ] v1.0 — 멀티 프로바이더 지원, 커뮤니티 메시지 팩
 
