@@ -20,9 +20,11 @@ if (command === 'config') {
     const config = loadConfig();
     const { getExchangeRate, SUPPORTED_CURRENCIES } = await import('../dist/exchange.js');
     const allItems = getAllEquivalents(config);
-    const unitDisplay = config.equivalentUnit === 'auto'
+    const unitKey = config.equivalentUnit || 'auto';
+    const matchedUnit = unitKey === 'auto' ? null : allItems.find(i => i.key === unitKey || i.name === unitKey);
+    const unitDisplay = unitKey === 'auto'
       ? t('cli.autoUnit')
-      : `${config.equivalentUnit}`;
+      : matchedUnit ? `${matchedUnit.emoji} ${matchedUnit.name}` : unitKey;
     const exchange = await getExchangeRate(config);
     console.log();
     showInfo(t('cli.currentConfig'));
@@ -90,11 +92,18 @@ if (command === 'config') {
         showConfigUpdate(t('cli.nudge'), value === 'off' ? t('cli.nudgeOff') : t('cli.nudgeOn'));
         i += 2;
         break;
-      case '--unit':
-        updateConfig({ equivalentUnit: value === 'auto' ? 'auto' : value });
+      case '--unit': {
+        let unitVal = value;
+        if (value !== 'auto') {
+          const items = getAllEquivalents(loadConfig());
+          const match = items.find(i => i.key === value || i.name === value);
+          unitVal = match?.key || value;
+        }
+        updateConfig({ equivalentUnit: unitVal });
         showConfigUpdate(t('cli.equivUnit'), value === 'auto' ? t('cli.autoUnit') : value);
         i += 2;
         break;
+      }
       case '--add-unit': {
         const parts = value.split(':');
         if ((parts.length !== 3 && parts.length !== 4) || isNaN(parseFloat(parts[1]))) {

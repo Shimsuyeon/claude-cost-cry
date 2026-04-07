@@ -25,6 +25,7 @@ export interface ModelPattern {
 }
 
 export interface EquivalentItem {
+  key?: string;
   name: string;
   price: number;
   emoji: string;

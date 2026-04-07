@@ -83,6 +83,8 @@ const ko = {
   'equiv.chicken.unit': '마리',
   'equiv.netflix': '넷플릭스 한 달',
   'equiv.netflix.unit': '개월',
+  'equiv.tteokbokki': '떡볶이',
+  'equiv.tteokbokki.unit': '인분',
   'equiv.frappuccino': '스타벅스 프라푸치노',
   'equiv.frappuccino.unit': '잔',
 

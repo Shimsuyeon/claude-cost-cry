@@ -321,7 +321,7 @@ app.whenReady().then(async () => {
     const cfg = loadConfig();
     return {
       ...cfg,
-      allUnits: getAllEquivalents(cfg).map(e => ({ name: e.name, emoji: e.emoji })),
+      allUnits: getAllEquivalents(cfg).map(e => ({ key: e.key || e.name, name: e.name, emoji: e.emoji })),
       supportedCurrencies: SUPPORTED_CURRENCIES,
       supportedProviders: getProviderNames(),
       currentExchange: exchangeInfo,

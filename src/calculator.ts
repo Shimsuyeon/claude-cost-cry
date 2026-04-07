@@ -1,4 +1,4 @@
-import { getPricing, getEquivalents } from './pricing.js';
+import { getPricing, getEquivalents, resolveEquivKey } from './pricing.js';
 import { calculateCost as providerCalculateCost, getProvider } from './providers/index.js';
 import type { Usage, Config, EquivalentResult, SavingsNudge } from './types.js';
 
@@ -36,7 +36,8 @@ export function toEquivalent(cost: number, config: Config): EquivalentResult | n
   const unit = config?.equivalentUnit || 'auto';
 
   if (unit !== 'auto') {
-    const fixed = allItems.find(i => i.name === unit);
+    const resolved = resolveEquivKey(unit);
+    const fixed = allItems.find(i => i.key === resolved || i.name === resolved);
     if (fixed) {
       return { ...fixed, count: Math.round((cost / fixed.price) * 10) / 10 };
     }

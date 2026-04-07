@@ -857,7 +857,7 @@
   let L = {};
 
   function loc(key, params) {
-    let text = L[key] || key;
+    let text = (key in L) ? L[key] : key;
     if (params) {
       for (const [k, v] of Object.entries(params)) {
         text = text.replace(new RegExp(`\\{${k}\\}`, 'g'), String(v));
@@ -884,6 +884,9 @@
     document.getElementById('lblLang').textContent = loc('settings.language');
     saveBtn.textContent = loc('settings.save');
     updateBtn.textContent = loc('settings.checkUpdate');
+
+    const autoOpt = unitSelect.querySelector('option[value="auto"]');
+    if (autoOpt) autoOpt.textContent = loc('settings.autoUnit');
 
     equivEl.textContent = loc('overlay.walletPeace');
   }
@@ -970,7 +973,7 @@
     if (cfg.allUnits) {
       for (const u of cfg.allUnits) {
         const opt = document.createElement('option');
-        opt.value = u.name;
+        opt.value = u.key || u.name;
         opt.textContent = `${u.emoji} ${u.name}`;
         unitSelect.appendChild(opt);
       }
@@ -1235,6 +1238,26 @@
       updateBtn.textContent = loc('settings.checkFailed');
       updateBtn.classList.remove('checking');
       setTimeout(() => { updateBtn.textContent = loc('settings.checkUpdate'); }, 2000);
+    }
+  });
+
+  // ── Instant language switch ──
+
+  langSelect.addEventListener('change', async () => {
+    const newLang = langSelect.value;
+    await window.bridge.saveConfig({ language: newLang });
+
+    const cfg = await window.bridge.getConfig();
+    if (cfg.allUnits) {
+      const prevKey = unitSelect.value;
+      unitSelect.innerHTML = `<option value="auto">${loc('settings.autoUnit')}</option>`;
+      for (const u of cfg.allUnits) {
+        const opt = document.createElement('option');
+        opt.value = u.key || u.name;
+        opt.textContent = `${u.emoji} ${u.name}`;
+        unitSelect.appendChild(opt);
+      }
+      unitSelect.value = prevKey;
     }
   });
 

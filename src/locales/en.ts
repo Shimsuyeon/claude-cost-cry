@@ -83,6 +83,8 @@ const en = {
   'equiv.chicken.unit': '',
   'equiv.netflix': 'Netflix (1 month)',
   'equiv.netflix.unit': '',
+  'equiv.tteokbokki': 'Tteokbokki',
+  'equiv.tteokbokki.unit': '',
   'equiv.frappuccino': 'Starbucks Frappuccino',
   'equiv.frappuccino.unit': '',
 

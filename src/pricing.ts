@@ -1,4 +1,6 @@
 import { t } from './i18n.js';
+import en from './locales/en.js';
+import ko from './locales/ko.js';
 import type { ModelPricing, ModelPattern, EquivalentItem } from './types.js';
 
 const MODEL_PRICING: Record<string, ModelPricing> = {
@@ -28,12 +30,26 @@ export function getModelLabel(modelName: string): string {
 
 export function getEquivalents(): EquivalentItem[] {
   return [
-    { name: t('equiv.americano'), price: 4.5, emoji: '☕', unit: t('equiv.americano.unit') },
-    { name: t('equiv.lunch'), price: 8, emoji: '🍱', unit: t('equiv.lunch.unit') },
-    { name: t('equiv.chicken'), price: 17, emoji: '🍗', unit: t('equiv.chicken.unit') },
-    { name: t('equiv.netflix'), price: 13, emoji: '📺', unit: t('equiv.netflix.unit') },
-    { name: t('equiv.frappuccino'), price: 6, emoji: '🥤', unit: t('equiv.frappuccino.unit') },
+    { key: 'americano', name: t('equiv.americano'), price: 4.5, emoji: '☕', unit: t('equiv.americano.unit') },
+    { key: 'lunch', name: t('equiv.lunch'), price: 8, emoji: '🍱', unit: t('equiv.lunch.unit') },
+    { key: 'tteokbokki', name: t('equiv.tteokbokki'), price: 3.5, emoji: '🍢', unit: t('equiv.tteokbokki.unit') },
+    { key: 'chicken', name: t('equiv.chicken'), price: 17, emoji: '🍗', unit: t('equiv.chicken.unit') },
+    { key: 'netflix', name: t('equiv.netflix'), price: 13, emoji: '📺', unit: t('equiv.netflix.unit') },
+    { key: 'frappuccino', name: t('equiv.frappuccino'), price: 6, emoji: '🥤', unit: t('equiv.frappuccino.unit') },
   ];
+}
+
+const EQUIV_KEYS = ['americano', 'lunch', 'tteokbokki', 'chicken', 'netflix', 'frappuccino'] as const;
+const locales = [en, ko] as const;
+
+export function resolveEquivKey(nameOrKey: string): string {
+  if ((EQUIV_KEYS as readonly string[]).includes(nameOrKey)) return nameOrKey;
+  for (const key of EQUIV_KEYS) {
+    for (const loc of locales) {
+      if (nameOrKey === loc[`equiv.${key}` as keyof typeof loc]) return key;
+    }
+  }
+  return nameOrKey;
 }
 
 export { getEquivalents as EQUIVALENTS_FN };

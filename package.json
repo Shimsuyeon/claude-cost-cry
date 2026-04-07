@@ -1,13 +1,20 @@
 {
   "name": "claude-cost-cry",
-  "version": "0.1.0",
-  "description": "당신의 Claude API 비용을 감정적으로 체감시켜주는 도구",
+  "version": "0.3.0",
+  "description": "Emotionally experience your API costs — real-time tracker with floating widget",
   "type": "module",
   "bin": {
     "claude-cost-cry": "./bin/cli.js",
     "cost-cry": "./bin/cli.js"
   },
   "main": "dist/index.js",
+  "files": [
+    "bin/",
+    "dist/",
+    "electron/",
+    "assets/",
+    "README.ko.md"
+  ],
   "scripts": {
     "build": "tsc",
     "start": "node bin/cli.js",
@@ -23,10 +30,26 @@
     "cli",
     "anthropic",
     "token",
-    "usage"
+    "usage",
+    "openai",
+    "cursor",
+    "gemini",
+    "llm",
+    "billing",
+    "overlay",
+    "electron",
+    "widget"
   ],
-  "author": "",
+  "author": "Shimsuyeon",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Shimsuyeon/claude-cost-cry.git"
+  },
+  "homepage": "https://github.com/Shimsuyeon/claude-cost-cry#readme",
+  "bugs": {
+    "url": "https://github.com/Shimsuyeon/claude-cost-cry/issues"
+  },
   "engines": {
     "node": ">=18.0.0"
   },
