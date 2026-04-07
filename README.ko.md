@@ -13,6 +13,10 @@
 
 Claude Code(및 기타 LLM 프로바이더) 사용 시 실시간으로 비용을 추적하면서, 돈이 날아가는 순간을 감정 메시지, 일상 환산, 플로팅 위젯으로 체감시켜줍니다.
 
+
+<img width="268" height="132" alt="image" src="https://github.com/user-attachments/assets/73b7a9c8-593c-407c-8c41-a12a1c92cda1" />
+
+
 ```
 $ cost-cry
 
@@ -35,6 +39,10 @@ $ cost-cry
   💸 +$0.06  →  누적: $8.79  🍗 0.5마리
      "지갑이 울고 있어요 진짜로"
 ```
+<div>
+<img width="250" alt="image" src="https://github.com/user-attachments/assets/b69e48e0-a212-49c8-b995-19a04a9e0205" />
+<img width="250" alt="image" src="https://github.com/user-attachments/assets/ad47eef6-361f-43d9-aa1d-01b4a4e1489d" />
+</div>
 
 ## 비용 구간별 감정 이펙트
 
