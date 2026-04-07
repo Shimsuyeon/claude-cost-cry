@@ -362,6 +362,20 @@ app.whenReady().then(async () => {
     return getReportData(d);
   });
 
+  ipcMain.handle('check-update', async () => {
+    const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'package.json'), 'utf-8'));
+    const current = pkg.version;
+    try {
+      const resp = await fetch(`https://registry.npmjs.org/${pkg.name}/latest`, { timeout: 5000 });
+      if (!resp.ok) return { current, latest: current, updateAvailable: false };
+      const data = await resp.json();
+      const latest = data.version || current;
+      return { current, latest, updateAvailable: latest !== current };
+    } catch {
+      return { current, latest: current, updateAvailable: false, error: true };
+    }
+  });
+
   ipcMain.on('resize-widget', (_e, expanded) => {
     if (!overlay) return;
     const h = expanded ? WIDGET_HEIGHT_EXPANDED : WIDGET_HEIGHT;

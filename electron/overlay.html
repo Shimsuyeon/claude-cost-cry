@@ -586,6 +586,53 @@
     border-top: 1px solid rgba(255, 255, 255, 0.06);
   }
 
+  /* ── Version / Update ── */
+  .version-section {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+  }
+
+  .version-label {
+    font-size: 9px;
+    color: rgba(255, 255, 255, 0.3);
+  }
+
+  .update-btn {
+    font-size: 9px;
+    padding: 3px 8px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 4px;
+    background: transparent;
+    color: rgba(255, 255, 255, 0.5);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .update-btn:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.8);
+  }
+
+  .update-btn.has-update {
+    border-color: rgba(76, 175, 80, 0.5);
+    color: rgba(76, 175, 80, 0.9);
+    animation: pulse-update 2s infinite;
+  }
+
+  @keyframes pulse-update {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+  }
+
+  .update-btn.checking {
+    opacity: 0.5;
+    pointer-events: none;
+  }
+
   .daily-row {
     display: flex;
     align-items: center;
@@ -718,6 +765,11 @@
     </div>
 
     <button class="save-btn" id="saveBtn">저장</button>
+
+    <div class="version-section" id="versionSection">
+      <span class="version-label" id="versionLabel">v...</span>
+      <button class="update-btn" id="updateBtn">업데이트 확인</button>
+    </div>
   </div>
 </div>
 
@@ -752,6 +804,9 @@
   const exchangeInfoEl = document.getElementById('exchangeInfo');
   const exchangeRateDisplay = document.getElementById('exchangeRateDisplay');
   const exchangeSource = document.getElementById('exchangeSource');
+
+  const versionLabel = document.getElementById('versionLabel');
+  const updateBtn = document.getElementById('updateBtn');
 
   let activePanel = null;
   let latestData = {};
@@ -867,6 +922,20 @@
 
     saveBtn.textContent = '저장';
     saveBtn.classList.remove('saved');
+
+    window.bridge.checkUpdate().then(info => {
+      versionLabel.textContent = `v${info.current}`;
+      if (info.updateAvailable) {
+        updateBtn.textContent = `v${info.latest} 업데이트 가능`;
+        updateBtn.classList.add('has-update');
+      } else {
+        updateBtn.textContent = '최신 버전';
+        updateBtn.classList.remove('has-update');
+      }
+    }).catch(() => {
+      versionLabel.textContent = 'v?';
+    });
+
     openPanel('settings');
   });
 
@@ -1025,6 +1094,40 @@
   window.bridge.onReportRefreshed(({ data }) => {
     if (activePanel === 'chart') loadChart(data);
     if (activePanel === 'models') loadModels(data);
+  });
+
+  // ── Update check ──
+
+  updateBtn.addEventListener('click', async () => {
+    updateBtn.classList.add('checking');
+    updateBtn.textContent = '확인 중...';
+
+    try {
+      const info = await window.bridge.checkUpdate();
+      versionLabel.textContent = `v${info.current}`;
+
+      if (info.updateAvailable) {
+        updateBtn.textContent = `v${info.latest} 업데이트 가능`;
+        updateBtn.classList.remove('checking');
+        updateBtn.classList.add('has-update');
+
+        updateBtn.onclick = () => {
+          navigator.clipboard.writeText('npm update -g claude-cost-cry');
+          updateBtn.textContent = '✓ 명령어 복사됨';
+          setTimeout(() => {
+            updateBtn.textContent = `v${info.latest} 업데이트 가능`;
+          }, 2000);
+        };
+      } else {
+        updateBtn.textContent = '✓ 최신 버전';
+        updateBtn.classList.remove('checking', 'has-update');
+        setTimeout(() => { updateBtn.textContent = '업데이트 확인'; }, 2000);
+      }
+    } catch {
+      updateBtn.textContent = '확인 실패';
+      updateBtn.classList.remove('checking');
+      setTimeout(() => { updateBtn.textContent = '업데이트 확인'; }, 2000);
+    }
   });
 
   // ── Settings save ──

@@ -10,5 +10,6 @@ contextBridge.exposeInMainWorld('bridge', {
   getConfig: () => ipcRenderer.invoke('get-config'),
   saveConfig: (updates) => ipcRenderer.invoke('save-config', updates),
   getReport: (days) => ipcRenderer.invoke('get-report', days),
+  checkUpdate: () => ipcRenderer.invoke('check-update'),
   resizeWidget: (expanded) => ipcRenderer.send('resize-widget', expanded),
 });
