@@ -52,6 +52,12 @@ function createOverlay() {
     overlay.webContents.send('initial-data', buildPayload());
   });
 
+  overlay.webContents.setWindowOpenHandler(({ url }) => {
+    const { shell } = require('electron');
+    shell.openExternal(url);
+    return { action: 'deny' };
+  });
+
   overlay.on('closed', () => {
     overlay = null;
   });

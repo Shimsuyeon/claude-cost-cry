@@ -665,6 +665,24 @@
     pointer-events: none;
   }
 
+  .settings-footer {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 6px;
+    font-size: 9px;
+  }
+
+  .settings-footer a {
+    color: rgba(255, 255, 255, 0.3);
+    text-decoration: none;
+    transition: color 0.15s;
+  }
+
+  .settings-footer a:hover {
+    color: rgba(255, 255, 255, 0.6);
+  }
+
   .daily-row {
     display: flex;
     align-items: center;
@@ -810,6 +828,12 @@
     <div class="version-section" id="versionSection">
       <span class="version-label" id="versionLabel">v...</span>
       <button class="update-btn" id="updateBtn"></button>
+    </div>
+
+    <div class="settings-footer">
+      <a href="https://buymeacoffee.com/shimsuyeon" target="_blank" id="footerCoffee">☕ Buy me a coffee</a>
+      <span style="color: rgba(255,255,255,0.15)">·</span>
+      <a href="https://github.com/Shimsuyeon" target="_blank" id="footerGithub">GitHub @Shimsuyeon</a>
     </div>
   </div>
 </div>
