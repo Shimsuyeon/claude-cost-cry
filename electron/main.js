@@ -16,7 +16,7 @@ let costByProvider = {};
 
 const WIDGET_WIDTH = 280;
 const WIDGET_HEIGHT = 140;
-const WIDGET_HEIGHT_EXPANDED = 420;
+const WIDGET_HEIGHT_EXPANDED = 480;
 const MARGIN = 20;
 
 function createOverlay() {
@@ -348,8 +348,18 @@ app.whenReady().then(async () => {
   });
 
   ipcMain.handle('get-report', async (_e, days) => {
-    const { getReportData } = await import('../src/report.js');
-    return getReportData(days || 7);
+    const d = days || 7;
+    const { getCachedReportData, getReportData } = await import('../src/report.js');
+    const cached = getCachedReportData(d);
+
+    if (cached) {
+      getReportData(d).then(fresh => {
+        overlay?.webContents?.send('report-refreshed', { days: d, data: fresh });
+      }).catch(() => {});
+      return cached;
+    }
+
+    return getReportData(d);
   });
 
   ipcMain.on('resize-widget', (_e, expanded) => {

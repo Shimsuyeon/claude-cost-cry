@@ -207,8 +207,9 @@ function computeSavingsSimulation(modelSummary) {
 /**
  * 오버레이용 리포트 데이터를 반환한다 (원시 데이터만, 스타일링 없이).
  */
-export async function getReportData(daysBack = 7) {
-  const dailyData = await aggregateByDate(daysBack);
+const _reportCache = new Map();
+
+function _buildReportResult(dailyData) {
   const stats = computeStats(dailyData);
   const modelSummary = buildModelSummary(dailyData);
   const savingsSimulation = computeSavingsSimulation(modelSummary);
@@ -231,4 +232,16 @@ export async function getReportData(daysBack = 7) {
     modelSummary,
     savingsSimulation,
   };
+}
+
+export function getCachedReportData(daysBack = 7) {
+  const cached = _reportCache.get(daysBack);
+  return cached?.data || null;
+}
+
+export async function getReportData(daysBack = 7) {
+  const dailyData = await aggregateByDate(daysBack);
+  const data = _buildReportResult(dailyData);
+  _reportCache.set(daysBack, { data, ts: Date.now() });
+  return data;
 }

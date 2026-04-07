@@ -38,11 +38,55 @@ export async function aggregateByDate(daysBack = 30) {
 
   const dailyMap = new Map();
 
-  for (const source of sources) {
-    if (source.isApi) continue; // API 기반 프로바이더는 로컬 파일이 없으므로 건너뜀
+  function addUsage(dateKey, cost, modelLabel, providerName) {
+    if (!dailyMap.has(dateKey)) {
+      dailyMap.set(dateKey, {
+        date: dateKey,
+        day: getDayOfWeek(dateKey),
+        totalCost: 0,
+        callCount: 0,
+        models: {},
+        providers: {},
+      });
+    }
+    const day = dailyMap.get(dateKey);
+    day.totalCost += cost;
+    day.callCount++;
 
+    if (!day.models[modelLabel]) {
+      day.models[modelLabel] = { cost: 0, calls: 0, provider: providerName };
+    }
+    day.models[modelLabel].cost += cost;
+    day.models[modelLabel].calls++;
+
+    day.providers[providerName] = (day.providers[providerName] || 0) + cost;
+  }
+
+  for (const source of sources) {
     const provider = getProvider(source.provider);
     if (!provider) continue;
+
+    if (source.isApi) {
+      try {
+        let page = 1;
+        while (true) {
+          const data = await provider.fetchUsageEvents(cutoffMs, Date.now(), page, 100);
+          const events = data.usageEventsDisplay || [];
+          for (const ev of events) {
+            const usage = provider.parseApiEvent(ev);
+            const cost = provider.calculateCost(usage);
+            const dateKey = toDateKey(usage.timestamp);
+            const modelLabel = provider.getModelLabel(usage.model);
+            addUsage(dateKey, cost, modelLabel, source.provider);
+          }
+          if (events.length < 100) break;
+          page++;
+        }
+      } catch {
+        // API 호출 실패 시 건너뜀
+      }
+      continue;
+    }
 
     const files = await findJsonlFiles(source.path);
 
@@ -64,29 +108,7 @@ export async function aggregateByDate(daysBack = 30) {
           const cost = calculateCost(usage);
           const dateKey = toDateKey(usage.timestamp);
           const modelLabel = provider.getModelLabel(usage.model);
-
-          if (!dailyMap.has(dateKey)) {
-            dailyMap.set(dateKey, {
-              date: dateKey,
-              day: getDayOfWeek(dateKey),
-              totalCost: 0,
-              callCount: 0,
-              models: {},
-              providers: {},
-            });
-          }
-
-          const day = dailyMap.get(dateKey);
-          day.totalCost += cost;
-          day.callCount++;
-
-          if (!day.models[modelLabel]) {
-            day.models[modelLabel] = { cost: 0, calls: 0, provider: source.provider };
-          }
-          day.models[modelLabel].cost += cost;
-          day.models[modelLabel].calls++;
-
-          day.providers[source.provider] = (day.providers[source.provider] || 0) + cost;
+          addUsage(dateKey, cost, modelLabel, source.provider);
         }
       } catch {
         // skip

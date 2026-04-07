@@ -450,8 +450,12 @@
     padding: 12px 0;
   }
 
+  /* ── Models panel ── */
+  .models-panel.open { max-height: 220px; }
+  .models-panel .chart-panel-title { margin-bottom: 6px; }
+
   /* ── Chart panel ── */
-  .chart-panel.open { max-height: 260px; }
+  .chart-panel.open { max-height: 320px; }
 
   .chart-panel-title {
     font-size: 11px;
@@ -581,13 +585,51 @@
     padding-top: 5px;
     border-top: 1px solid rgba(255, 255, 255, 0.06);
   }
+
+  .daily-row {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    margin-bottom: 3px;
+    font-size: 9px;
+  }
+
+  .daily-date {
+    width: 48px;
+    color: rgba(255, 255, 255, 0.4);
+    flex-shrink: 0;
+  }
+
+  .daily-bar-bg {
+    flex: 1;
+    height: 8px;
+    background: rgba(255, 255, 255, 0.06);
+    border-radius: 2px;
+    overflow: hidden;
+    min-width: 0;
+  }
+
+  .daily-cost {
+    width: 40px;
+    text-align: right;
+    color: rgba(255, 255, 255, 0.6);
+    font-weight: 600;
+    flex-shrink: 0;
+  }
+
+  .daily-calls {
+    width: 26px;
+    text-align: right;
+    color: rgba(255, 255, 255, 0.3);
+    flex-shrink: 0;
+  }
 </style>
 </head>
 <body>
 
 <div class="widget tier-peace" id="widget">
   <div class="toolbar">
-    <div class="tool-btn" id="chartBtn" title="주간 리포트">📊</div>
+    <div class="tool-btn" id="chartBtn" title="일별 비용">📊</div>
     <div class="tool-btn" id="modelsBtn" title="모델별 비용">🏷️</div>
     <div class="tool-btn" id="topBtn" title="비싼 요청 TOP 3">🏆</div>
     <div class="tool-btn" id="gearBtn" title="설정">⚙</div>
@@ -620,14 +662,14 @@
   <!-- Chart Panel -->
   <div class="panel chart-panel" id="chartPanel">
     <div class="panel-divider"></div>
-    <div class="chart-panel-title">📊 주간 비용 추이</div>
+    <div class="chart-panel-title">📊 일별 비용 (최근 7일)</div>
     <div id="chartBody"></div>
   </div>
 
   <!-- Models Panel -->
-  <div class="panel chart-panel" id="modelsPanel">
+  <div class="panel models-panel" id="modelsPanel">
     <div class="panel-divider"></div>
-    <div class="chart-panel-title">🏷️ 모델별 비용 (최근 7일)</div>
+    <div class="chart-panel-title">🏷️ 모델별 비용 비교</div>
     <div id="modelsBody"></div>
   </div>
 
@@ -886,28 +928,29 @@
 
   // ── Chart ──
 
-  async function loadChart() {
-    chartBody.innerHTML = '<div class="top-empty">로딩 중...</div>';
-    const report = await window.bridge.getReport(7);
+  async function loadChart(preloaded) {
+    if (!preloaded) chartBody.innerHTML = '<div class="top-empty">로딩 중...</div>';
+    const report = preloaded || await window.bridge.getReport(7);
+    const days = report.dailyData || [];
 
-    if (!report.dailyData || report.dailyData.length === 0) {
+    if (days.length === 0) {
       chartBody.innerHTML = '<div class="top-empty">데이터가 없습니다</div>';
       return;
     }
 
-    const maxCost = Math.max(...report.dailyData.map(d => d.cost), 0.01);
+    const maxCost = Math.max(...days.map(d => d.cost), 0.01);
 
-    let html = report.dailyData.map(d => {
+    let html = days.slice(-7).reverse().map(d => {
       const pct = Math.round((d.cost / maxCost) * 100);
       const barClass = pct >= 80 ? 'high' : pct >= 50 ? 'mid' : 'low';
-      const costStr = d.cost > 0 ? formatCost(d.cost) : '·';
       return `
-        <div class="chart-row">
-          <span class="chart-date">${d.date} ${d.day}</span>
-          <div class="chart-bar-bg">
+        <div class="daily-row">
+          <span class="daily-date">${d.date} ${d.day}</span>
+          <div class="daily-bar-bg">
             <div class="chart-bar-fill ${barClass}" style="width:${pct}%"></div>
           </div>
-          <span class="chart-cost">${costStr}</span>
+          <span class="daily-cost">${d.cost > 0 ? formatCost(d.cost) : '·'}</span>
+          <span class="daily-calls">${d.calls || 0}건</span>
         </div>
       `;
     }).join('');
@@ -936,9 +979,9 @@
 
   // ── Models ──
 
-  async function loadModels() {
-    modelsBody.innerHTML = '<div class="top-empty">로딩 중...</div>';
-    const report = await window.bridge.getReport(7);
+  async function loadModels(preloaded) {
+    if (!preloaded) modelsBody.innerHTML = '<div class="top-empty">로딩 중...</div>';
+    const report = preloaded || await window.bridge.getReport(7);
     const models = report.modelSummary || [];
 
     if (models.length === 0) {
@@ -976,6 +1019,13 @@
 
     modelsBody.innerHTML = html;
   }
+
+  // ── SWR: background refresh ──
+
+  window.bridge.onReportRefreshed(({ data }) => {
+    if (activePanel === 'chart') loadChart(data);
+    if (activePanel === 'models') loadModels(data);
+  });
 
   // ── Settings save ──
 
