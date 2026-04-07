@@ -3,16 +3,17 @@ import { formatCostShort, toEquivalent } from './calculator.js';
 import { aggregateByDate, computeStats } from './history.js';
 import { loadConfig } from './config.js';
 import { getProvider, getProviderEmoji } from './providers/index.js';
+import type { DailyData, DailyStats, ModelSummaryItem, SavingsSimulationItem } from './types.js';
 
 const BAR_MAX_WIDTH = 30;
 
-function renderBar(value, maxValue, width = BAR_MAX_WIDTH) {
+function renderBar(value: number, maxValue: number, width = BAR_MAX_WIDTH): string {
   if (maxValue <= 0) return '';
   const filled = Math.round((value / maxValue) * width);
   return '█'.repeat(filled) + '░'.repeat(width - filled);
 }
 
-function getBarColor(cost, maxCost) {
+function getBarColor(cost: number, maxCost: number) {
   const ratio = maxCost > 0 ? cost / maxCost : 0;
   if (ratio >= 0.8) return chalk.red;
   if (ratio >= 0.5) return chalk.yellow;
@@ -89,7 +90,7 @@ export async function showMonthlyReport() {
   return { dailyData, stats };
 }
 
-function printStats(stats) {
+function printStats(stats: DailyStats): void {
   const config = loadConfig();
   const equiv = toEquivalent(stats.totalCost, config);
   const equivStr = equiv ? ` (${equiv.emoji} ${equiv.name} ${equiv.count}${equiv.unit || '개'})` : '';
@@ -97,7 +98,7 @@ function printStats(stats) {
   console.log();
   console.log(`  💰 총 비용:     ${chalk.bold.yellow(formatCostShort(stats.totalCost))}${chalk.gray(equivStr)}`);
   console.log(`  📈 일 평균:     ${chalk.cyan(formatCostShort(stats.avgDaily))}`);
-  console.log(`  🔥 최고 지출일: ${chalk.red(stats.maxDay.date)} (${stats.maxDay.day}) — ${formatCostShort(stats.maxDay.totalCost)}`);
+  console.log(`  🔥 최고 지출일: ${chalk.red(stats.maxDay!.date)} (${stats.maxDay!.day}) — ${formatCostShort(stats.maxDay!.totalCost)}`);
 
   if (stats.minDay && stats.minDay !== stats.maxDay) {
     console.log(`  🌿 최저 지출일: ${chalk.green(stats.minDay.date)} (${stats.minDay.day}) — ${formatCostShort(stats.minDay.totalCost)}`);
@@ -109,14 +110,14 @@ function printStats(stats) {
 
 const MODEL_BAR_WIDTH = 20;
 
-const PROVIDER_COLORS = {
+const PROVIDER_COLORS: Record<string, typeof chalk> = {
   claude: chalk.magenta,
   openai: chalk.hex('#74aa9c'),
   google: chalk.hex('#4285f4'),
   cursor: chalk.hex('#06b6d4'),
 };
 
-function printModelBreakdown(dailyData) {
+function printModelBreakdown(dailyData: DailyData[]): void {
   const summary = buildModelSummary(dailyData);
   if (summary.length === 0) return;
 
@@ -149,16 +150,16 @@ function printModelBreakdown(dailyData) {
   console.log();
 }
 
-function buildModelSummary(dailyData) {
-  const agg = {};
+function buildModelSummary(dailyData: DailyData[]): ModelSummaryItem[] {
+  const agg: Record<string, { model: string; provider: string; cost: number; calls: number }> = {};
 
   for (const day of dailyData) {
     for (const [model, info] of Object.entries(day.models)) {
       if (!agg[model]) {
         agg[model] = { model, provider: info.provider || 'claude', cost: 0, calls: 0 };
       }
-      agg[model].cost += info.cost ?? info;
-      agg[model].calls += info.calls ?? 1;
+      agg[model].cost += info.cost;
+      agg[model].calls += info.calls;
     }
   }
 
@@ -172,8 +173,8 @@ function buildModelSummary(dailyData) {
   }));
 }
 
-function computeSavingsSimulation(modelSummary) {
-  const results = [];
+function computeSavingsSimulation(modelSummary: ModelSummaryItem[]): SavingsSimulationItem[] {
+  const results: SavingsSimulationItem[] = [];
 
   for (const item of modelSummary) {
     if (item.cost < 0.01) continue;
@@ -183,18 +184,17 @@ function computeSavingsSimulation(modelSummary) {
     const currentPricing = provider.resolveModel(item.model);
     const currentLabel = currentPricing.label?.toLowerCase();
 
-    let cheapest = null;
+    let cheapest: SavingsSimulationItem | null = null;
 
     for (const [, pricing] of Object.entries(provider.models)) {
       if (pricing.label.toLowerCase() === currentLabel) continue;
       const ratio = (pricing.input + pricing.output) / (currentPricing.input + currentPricing.output);
       if (ratio >= 1) continue;
 
-      const altCost = item.cost * ratio;
-      const saving = item.cost - altCost;
+      const saving = item.cost - item.cost * ratio;
 
       if (saving > 0.01 && (!cheapest || saving > cheapest.saving)) {
-        cheapest = { from: item.model, to: pricing.label, saving, altCost };
+        cheapest = { from: item.model, to: pricing.label, saving };
       }
     }
 
@@ -204,12 +204,23 @@ function computeSavingsSimulation(modelSummary) {
   return results.sort((a, b) => b.saving - a.saving);
 }
 
-/**
- * 오버레이용 리포트 데이터를 반환한다 (원시 데이터만, 스타일링 없이).
- */
-const _reportCache = new Map();
+interface ReportDataResult {
+  dailyData: Array<{ date: string; day: string; cost: number; calls: number }>;
+  stats: {
+    totalCost: number;
+    avgDaily: number;
+    maxDay: string | null;
+    maxDayCost: number;
+    totalCalls: number;
+    daysActive: number;
+  } | null;
+  modelSummary: ModelSummaryItem[];
+  savingsSimulation: SavingsSimulationItem[];
+}
 
-function _buildReportResult(dailyData) {
+const _reportCache = new Map<number, { data: ReportDataResult; ts: number }>();
+
+function _buildReportResult(dailyData: DailyData[]): ReportDataResult {
   const stats = computeStats(dailyData);
   const modelSummary = buildModelSummary(dailyData);
   const savingsSimulation = computeSavingsSimulation(modelSummary);
@@ -234,12 +245,12 @@ function _buildReportResult(dailyData) {
   };
 }
 
-export function getCachedReportData(daysBack = 7) {
+export function getCachedReportData(daysBack = 7): ReportDataResult | null {
   const cached = _reportCache.get(daysBack);
   return cached?.data || null;
 }
 
-export async function getReportData(daysBack = 7) {
+export async function getReportData(daysBack = 7): Promise<ReportDataResult> {
   const dailyData = await aggregateByDate(daysBack);
   const data = _buildReportResult(dailyData);
   _reportCache.set(daysBack, { data, ts: Date.now() });

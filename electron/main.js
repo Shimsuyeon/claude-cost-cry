@@ -234,10 +234,10 @@ function updateTrayTitle() {
 }
 
 async function startCostTracking() {
-  const { scanToday, startWatching } = await import('../src/watcher.js');
-  const { calculateCost, toEquivalent: _toEquiv } = await import('../src/calculator.js');
-  const { loadConfig } = await import('../src/config.js');
-  const { getExchangeRate } = await import('../src/exchange.js');
+  const { scanToday, startWatching } = await import('../dist/watcher.js');
+  const { calculateCost, toEquivalent: _toEquiv } = await import('../dist/calculator.js');
+  const { loadConfig } = await import('../dist/config.js');
+  const { getExchangeRate } = await import('../dist/exchange.js');
 
   _toEquivalent = _toEquiv;
   config = loadConfig();
@@ -295,10 +295,10 @@ app.whenReady().then(async () => {
   });
 
   ipcMain.handle('get-config', async () => {
-    const { loadConfig } = await import('../src/config.js');
-    const { getAllEquivalents } = await import('../src/calculator.js');
-    const { SUPPORTED_CURRENCIES } = await import('../src/exchange.js');
-    const { getProviderNames } = await import('../src/providers/index.js');
+    const { loadConfig } = await import('../dist/config.js');
+    const { getAllEquivalents } = await import('../dist/calculator.js');
+    const { SUPPORTED_CURRENCIES } = await import('../dist/exchange.js');
+    const { getProviderNames } = await import('../dist/providers/index.js');
     const cfg = loadConfig();
     return {
       ...cfg,
@@ -310,8 +310,8 @@ app.whenReady().then(async () => {
   });
 
   ipcMain.handle('save-config', async (_e, updates) => {
-    const { updateConfig, loadConfig } = await import('../src/config.js');
-    const { getExchangeRate } = await import('../src/exchange.js');
+    const { updateConfig, loadConfig } = await import('../dist/config.js');
+    const { getExchangeRate } = await import('../dist/exchange.js');
     config = updateConfig(updates);
 
     if (updates.currency !== undefined || updates.exchangeRate !== undefined) {
@@ -327,7 +327,7 @@ app.whenReady().then(async () => {
 
   ipcMain.handle('get-report', async (_e, days) => {
     const d = days || 7;
-    const { getCachedReportData, getReportData } = await import('../src/report.js');
+    const { getCachedReportData, getReportData } = await import('../dist/report.js');
     const cached = getCachedReportData(d);
 
     if (cached) {

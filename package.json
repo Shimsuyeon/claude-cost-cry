@@ -6,11 +6,13 @@
   "bin": {
     "claude-cost-cry": "./bin/cli.js"
   },
-  "main": "src/index.js",
+  "main": "dist/index.js",
   "scripts": {
+    "build": "tsc",
     "start": "node bin/cli.js",
     "overlay": "electron electron/",
-    "dev": "node --watch bin/cli.js"
+    "dev": "tsc --watch",
+    "prepublishOnly": "npm run build"
   },
   "keywords": [
     "claude",
@@ -29,7 +31,11 @@
   },
   "dependencies": {
     "chalk": "^5.4.1",
-    "chokidar": "^4.0.3",
-    "electron": "^33.4.11"
+    "chokidar": "^4.0.3"
+  },
+  "devDependencies": {
+    "@types/node": "^25.5.2",
+    "electron": "^41.1.1",
+    "typescript": "^6.0.2"
   }
 }

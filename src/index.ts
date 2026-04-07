@@ -1,19 +1,19 @@
-import { existsSync } from 'node:fs';
 import { calculateCost, getSavingsNudge } from './calculator.js';
 import { loadConfig, getBudgetStatus } from './config.js';
 import { showBanner, showTodaySummary, showCostUpdate, showBudgetAlert, showShutdown, showError, showInfo } from './display.js';
 import { scanToday, startWatching, getClaudeProjectsDir, buildLogSources } from './watcher.js';
 import { getExchangeRate } from './exchange.js';
 import { getModelLabel, getProviderEmoji, getProviderDisplayName, getProvider } from './providers/index.js';
+import type { Usage, TopRequest, BudgetStatus } from './types.js';
 
-function truncatePrompt(text, maxLen = 30) {
+function truncatePrompt(text: string | null | undefined, maxLen = 30): string | null {
   if (!text) return null;
   const clean = text.replace(/\s+/g, ' ').trim();
   if (clean.length <= maxLen) return clean;
   return clean.slice(0, maxLen - 1) + '…';
 }
 
-function recordRequest(topRequests, usage, cost) {
+function recordRequest(topRequests: TopRequest[], usage: Usage, cost: number): void {
   const totalInput = usage.inputTokens + usage.cacheCreationTokens + usage.cacheReadTokens;
   const time = usage.timestamp
     ? new Date(usage.timestamp).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })
@@ -34,7 +34,7 @@ function recordRequest(topRequests, usage, cost) {
   if (topRequests.length > 3) topRequests.length = 3;
 }
 
-export async function main() {
+export async function main(): Promise<void> {
   showBanner();
 
   const config = loadConfig();
@@ -54,7 +54,6 @@ export async function main() {
     .join(' + ');
   showInfo(`추적 중: ${sourceInfo}`);
 
-  // Cursor 설치 감지 → 아직 설정 안 됐으면 안내
   const cursorProvider = getProvider('cursor');
   if (cursorProvider?.isAvailable?.() && !providerNames.includes('cursor')) {
     showInfo('💡 Cursor IDE가 감지됨! 추적하려면: claude-cost-cry config --add-source cursor');
@@ -69,8 +68,8 @@ export async function main() {
   let totalCost = 0;
   let callCount = todayUsages.length;
   let totalPotentialSavings = 0;
-  const topRequests = [];
-  const costByProvider = {};
+  const topRequests: TopRequest[] = [];
+  const costByProvider: Record<string, number> = {};
 
   for (const usage of todayUsages) {
     const cost = calculateCost(usage);
@@ -89,9 +88,9 @@ export async function main() {
   showTodaySummary(totalCost, callCount, budgetStatus, config, exchange, costByProvider);
 
   const sessionStartCost = totalCost;
-  let lastBudgetStatus = budgetStatus.status;
+  let lastBudgetStatus: BudgetStatus['status'] = budgetStatus.status;
 
-  const watcher = startWatching(fileOffsets, (usage) => {
+  const watcher = startWatching(fileOffsets, (usage: Usage) => {
     const cost = calculateCost(usage);
     totalCost += cost;
     callCount++;
@@ -122,7 +121,7 @@ export async function main() {
   const shutdown = () => {
     const sessionCost = totalCost - sessionStartCost;
     showShutdown(sessionCost, totalCost, totalPotentialSavings, topRequests, config, exchange, costByProvider);
-    watcher.close();
+    watcher!.close();
     process.exit(0);
   };
 

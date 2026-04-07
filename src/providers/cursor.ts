@@ -2,13 +2,38 @@ import { execSync } from 'node:child_process';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
 import { existsSync } from 'node:fs';
+import type { Provider, Usage, ModelPricing } from '../types.js';
 
 const STATE_DB_PATH = join(
   homedir(), 'Library', 'Application Support', 'Cursor',
   'User', 'globalStorage', 'state.vscdb',
 );
 
-export default {
+interface CursorEvent {
+  timestamp: number | string;
+  model?: string;
+  chargedCents?: number;
+  usageBasedCosts?: string;
+  tokenUsage?: {
+    inputTokens?: number;
+    outputTokens?: number;
+    cacheWriteTokens?: number;
+    cacheReadTokens?: number;
+    totalCents?: number;
+  };
+}
+
+interface CursorApiResponse {
+  usageEventsDisplay?: CursorEvent[];
+}
+
+const provider: Provider & {
+  _cachedToken: string | null;
+  _cachedUserId: string | null;
+  _sortedKeys: string[] | null;
+  _lastPollTimestamp: number;
+  _getSortedKeys(): string[];
+} = {
   name: 'cursor',
   displayName: 'Cursor',
   emoji: '⚡',
@@ -34,16 +59,19 @@ export default {
     'gemini-2.0-flash':  { input: 0.1, output: 0.4, label: 'Gemini 2.0 Flash' },
   },
 
+  _cachedToken: null,
+  _cachedUserId: null,
   _sortedKeys: null,
+  _lastPollTimestamp: 0,
 
-  _getSortedKeys() {
+  _getSortedKeys(): string[] {
     if (!this._sortedKeys) {
       this._sortedKeys = Object.keys(this.models).sort((a, b) => b.length - a.length);
     }
     return this._sortedKeys;
   },
 
-  resolveModel(modelName) {
+  resolveModel(modelName: string): ModelPricing {
     const lower = (modelName || '').toLowerCase();
     for (const key of this._getSortedKeys()) {
       if (lower.includes(key)) return this.models[key];
@@ -55,32 +83,27 @@ export default {
     return { input: 3, output: 15, label: modelName || 'Unknown' };
   },
 
-  getModelLabel(modelName) {
+  getModelLabel(modelName: string): string {
     return this.resolveModel(modelName).label;
   },
 
-  parseLogLine() { return null; },
-  extractUserText() { return null; },
+  parseLogLine(): Usage | null { return null; },
+  extractUserText(): string | null { return null; },
 
-  calculateCost(usage) {
+  calculateCost(usage: Usage): number {
     if (usage.cost != null && usage.cost > 0) return usage.cost;
     const pricing = this.resolveModel(usage.model);
     return (usage.inputTokens / 1e6) * pricing.input
          + (usage.outputTokens / 1e6) * pricing.output;
   },
 
-  // ── Auth ──────────────────────────────────────────────────────────────────
-
-  _cachedToken: null,
-  _cachedUserId: null,
-
-  isAvailable() {
+  isAvailable(): boolean {
     return existsSync(STATE_DB_PATH);
   },
 
-  getSessionToken() {
+  getSessionToken(): string | null {
     if (this._cachedToken) return this._cachedToken;
-    if (!this.isAvailable()) return null;
+    if (!this.isAvailable!()) return null;
 
     try {
       const jwt = execSync(
@@ -94,7 +117,7 @@ export default {
       const payload = JSON.parse(
         Buffer.from(payloadB64, 'base64url').toString(),
       );
-      const sub = payload.sub || '';
+      const sub = (payload.sub || '') as string;
       const userId = sub.includes('|') ? sub.split('|')[1] : sub;
 
       this._cachedUserId = userId;
@@ -105,15 +128,13 @@ export default {
     }
   },
 
-  clearTokenCache() {
+  clearTokenCache(): void {
     this._cachedToken = null;
     this._cachedUserId = null;
   },
 
-  // ── API ───────────────────────────────────────────────────────────────────
-
-  async fetchUsageEvents(startDateMs, endDateMs, page = 1, pageSize = 50) {
-    const token = this.getSessionToken();
+  async fetchUsageEvents(startDateMs: number, endDateMs: number, page = 1, pageSize = 50): Promise<CursorApiResponse> {
+    const token = this.getSessionToken!();
     if (!token) throw new Error('Cursor session token not available');
 
     const resp = await fetch(
@@ -138,43 +159,44 @@ export default {
     );
 
     if (resp.status === 401 || resp.status === 403) {
-      this.clearTokenCache();
+      this.clearTokenCache!();
       throw new Error('Cursor auth token expired');
     }
     if (!resp.ok) {
       throw new Error(`Cursor API ${resp.status}`);
     }
 
-    return resp.json();
+    return resp.json() as Promise<CursorApiResponse>;
   },
 
-  parseApiEvent(event) {
-    const timestampMs = typeof event.timestamp === 'number'
-      ? event.timestamp
-      : parseInt(event.timestamp, 10);
+  parseApiEvent(event: unknown): Usage {
+    const ev = event as CursorEvent;
+    const timestampMs = typeof ev.timestamp === 'number'
+      ? ev.timestamp
+      : parseInt(ev.timestamp as string, 10);
 
-    const tu = event.tokenUsage || {};
+    const tu = ev.tokenUsage || {};
     const inputTokens  = tu.inputTokens || 0;
     const outputTokens = tu.outputTokens || 0;
     const cacheWrite   = tu.cacheWriteTokens || 0;
     const cacheRead    = tu.cacheReadTokens || 0;
 
     let cost = 0;
-    if (event.chargedCents > 0) {
-      cost = event.chargedCents / 100;
+    if (ev.chargedCents && ev.chargedCents > 0) {
+      cost = ev.chargedCents / 100;
     } else {
-      const costStr = event.usageBasedCosts;
+      const costStr = ev.usageBasedCosts;
       if (costStr && costStr !== '$0.00' && costStr !== '-') {
         cost = parseFloat(costStr.replace('$', '')) || 0;
       }
     }
-    if (!cost && tu.totalCents > 0) {
+    if (!cost && tu.totalCents && tu.totalCents > 0) {
       cost = tu.totalCents / 100;
     }
 
     return {
       provider: 'cursor',
-      model: event.model || 'unknown',
+      model: ev.model || 'unknown',
       inputTokens,
       outputTokens,
       cacheCreationTokens: cacheWrite,
@@ -185,22 +207,20 @@ export default {
     };
   },
 
-  // ── Scan & Poll ───────────────────────────────────────────────────────────
-
-  async scanToday() {
+  async scanToday(): Promise<Usage[]> {
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);
     const now = Date.now();
-    const usages = [];
+    const usages: Usage[] = [];
     let page = 1;
 
     while (true) {
-      const data = await this.fetchUsageEvents(
+      const data = await this.fetchUsageEvents!(
         todayStart.getTime(), now, page, 100,
-      );
+      ) as CursorApiResponse;
       const events = data.usageEventsDisplay || [];
       for (const ev of events) {
-        usages.push(this.parseApiEvent(ev));
+        usages.push(this.parseApiEvent!(ev));
       }
       if (events.length < 100) break;
       page++;
@@ -218,22 +238,22 @@ export default {
     return usages;
   },
 
-  startPolling(onNewUsage, interval = 60_000) {
-    if (!this.isAvailable() || !this.getSessionToken()) return null;
+  startPolling(onNewUsage: (usage: Usage) => void, interval = 60_000): { close(): void } | null {
+    if (!this.isAvailable!() || !this.getSessionToken!()) return null;
 
     let lastTs = this._lastPollTimestamp || Date.now();
 
     const poll = async () => {
       try {
         const now = Date.now();
-        const data = await this.fetchUsageEvents(
+        const data = await this.fetchUsageEvents!(
           lastTs - 5000, now, 1, 50,
-        );
+        ) as CursorApiResponse;
         const events = data.usageEventsDisplay || [];
         let maxTs = lastTs;
 
         for (const ev of events) {
-          const usage = this.parseApiEvent(ev);
+          const usage = this.parseApiEvent!(ev);
           const ts = new Date(usage.timestamp).getTime();
           if (ts > lastTs) {
             onNewUsage(usage);
@@ -242,8 +262,8 @@ export default {
         }
         lastTs = maxTs;
       } catch (err) {
-        if (err.message?.includes('expired')) {
-          this.clearTokenCache();
+        if (err instanceof Error && err.message?.includes('expired')) {
+          this.clearTokenCache!();
         }
       }
     };
@@ -252,3 +272,5 @@ export default {
     return { close() { clearInterval(timer); } };
   },
 };
+
+export default provider;

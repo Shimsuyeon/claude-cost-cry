@@ -1,22 +1,22 @@
 import { readFile, readdir } from 'node:fs/promises';
-import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { calculateCost } from './calculator.js';
 import { loadConfig } from './config.js';
 import { buildLogSources } from './watcher.js';
 import { getProvider } from './providers/index.js';
+import type { DailyData, DailyStats } from './types.js';
 
-function toDateKey(timestamp) {
+function toDateKey(timestamp: string): string {
   const d = new Date(timestamp);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
-function getDayOfWeek(dateKey) {
+function getDayOfWeek(dateKey: string): string {
   const days = ['일', '월', '화', '수', '목', '금', '토'];
   return days[new Date(dateKey).getDay()];
 }
 
-function parseLine(line) {
+function parseLine(line: string): Record<string, unknown> | null {
   const trimmed = line.trim();
   if (!trimmed) return null;
   try {
@@ -26,7 +26,7 @@ function parseLine(line) {
   }
 }
 
-export async function aggregateByDate(daysBack = 30) {
+export async function aggregateByDate(daysBack = 30): Promise<DailyData[]> {
   const config = loadConfig();
   const sources = buildLogSources(config);
   if (sources.length === 0) return [];
@@ -36,9 +36,9 @@ export async function aggregateByDate(daysBack = 30) {
   cutoff.setHours(0, 0, 0, 0);
   const cutoffMs = cutoff.getTime();
 
-  const dailyMap = new Map();
+  const dailyMap = new Map<string, DailyData>();
 
-  function addUsage(dateKey, cost, modelLabel, providerName) {
+  function addUsage(dateKey: string, cost: number, modelLabel: string, providerName: string): void {
     if (!dailyMap.has(dateKey)) {
       dailyMap.set(dateKey, {
         date: dateKey,
@@ -49,7 +49,7 @@ export async function aggregateByDate(daysBack = 30) {
         providers: {},
       });
     }
-    const day = dailyMap.get(dateKey);
+    const day = dailyMap.get(dateKey)!;
     day.totalCost += cost;
     day.callCount++;
 
@@ -70,10 +70,10 @@ export async function aggregateByDate(daysBack = 30) {
       try {
         let page = 1;
         while (true) {
-          const data = await provider.fetchUsageEvents(cutoffMs, Date.now(), page, 100);
+          const data = await provider.fetchUsageEvents!(cutoffMs, Date.now(), page, 100) as { usageEventsDisplay?: unknown[] };
           const events = data.usageEventsDisplay || [];
           for (const ev of events) {
-            const usage = provider.parseApiEvent(ev);
+            const usage = provider.parseApiEvent!(ev);
             const cost = provider.calculateCost(usage);
             const dateKey = toDateKey(usage.timestamp);
             const modelLabel = provider.getModelLabel(usage.model);
@@ -88,7 +88,7 @@ export async function aggregateByDate(daysBack = 30) {
       continue;
     }
 
-    const files = await findJsonlFiles(source.path);
+    const files = await findJsonlFiles(source.path!);
 
     for (const filePath of files) {
       try {
@@ -119,7 +119,7 @@ export async function aggregateByDate(daysBack = 30) {
   const days = Array.from(dailyMap.values());
   days.sort((a, b) => a.date.localeCompare(b.date));
 
-  const result = [];
+  const result: DailyData[] = [];
   if (days.length > 0) {
     const startDate = new Date(days[0].date);
     const endDate = new Date(days[days.length - 1].date);
@@ -141,7 +141,7 @@ export async function aggregateByDate(daysBack = 30) {
   return result;
 }
 
-export function computeStats(dailyData) {
+export function computeStats(dailyData: DailyData[]): DailyStats {
   if (dailyData.length === 0) {
     return { totalCost: 0, avgDaily: 0, maxDay: null, minDay: null, totalCalls: 0, daysActive: 0 };
   }
@@ -149,7 +149,7 @@ export function computeStats(dailyData) {
   let totalCost = 0;
   let totalCalls = 0;
   let maxDay = dailyData[0];
-  let minDay = null;
+  let minDay: DailyData | null = null;
   let daysActive = 0;
 
   for (const day of dailyData) {
@@ -165,10 +165,10 @@ export function computeStats(dailyData) {
   return { totalCost, avgDaily: daysActive > 0 ? totalCost / daysActive : 0, maxDay, minDay, totalCalls, daysActive };
 }
 
-async function findJsonlFiles(dir) {
-  const files = [];
+async function findJsonlFiles(dir: string): Promise<string[]> {
+  const files: string[] = [];
 
-  async function walk(currentDir) {
+  async function walk(currentDir: string): Promise<void> {
     try {
       const entries = await readdir(currentDir, { withFileTypes: true });
       for (const entry of entries) {

@@ -4,16 +4,16 @@ const args = process.argv.slice(2);
 const command = args[0];
 
 if (command === 'config') {
-  const { updateConfig, loadConfig } = await import('../src/config.js');
-  const { showConfigUpdate, showInfo } = await import('../src/display.js');
+  const { updateConfig, loadConfig } = await import('../dist/config.js');
+  const { showConfigUpdate, showInfo } = await import('../dist/display.js');
 
   const flags = args.slice(1);
 
-  const { getAllEquivalents } = await import('../src/calculator.js');
+  const { getAllEquivalents } = await import('../dist/calculator.js');
 
   if (flags.length === 0) {
     const config = loadConfig();
-    const { getExchangeRate, SUPPORTED_CURRENCIES } = await import('../src/exchange.js');
+    const { getExchangeRate, SUPPORTED_CURRENCIES } = await import('../dist/exchange.js');
     const allItems = getAllEquivalents(config);
     const unitDisplay = config.equivalentUnit === 'auto'
       ? '자동'
@@ -111,7 +111,7 @@ if (command === 'config') {
         break;
       }
       case '--currency': {
-        const { SUPPORTED_CURRENCIES } = await import('../src/exchange.js');
+        const { SUPPORTED_CURRENCIES } = await import('../dist/exchange.js');
         const cur = value.toUpperCase();
         if (!SUPPORTED_CURRENCIES.includes(cur)) {
           console.error(`  ❌ 지원하지 않는 통화: ${cur}. 지원: ${SUPPORTED_CURRENCIES.join(', ')}`);
@@ -139,7 +139,7 @@ if (command === 'config') {
         break;
       }
       case '--add-source': {
-        const { getProviderNames, getProvider: gp } = await import('../src/providers/index.js');
+        const { getProviderNames, getProvider: gp } = await import('../dist/providers/index.js');
         const colonIdx = value.indexOf(':');
 
         if (colonIdx === -1) {
@@ -210,8 +210,8 @@ if (command === 'config') {
     }
   }
 } else if (command === 'report') {
-  const { showWeeklyReport, showMonthlyReport } = await import('../src/report.js');
-  const { showBanner } = await import('../src/display.js');
+  const { showWeeklyReport, showMonthlyReport } = await import('../dist/report.js');
+  const { showBanner } = await import('../dist/display.js');
 
   showBanner();
 
@@ -281,7 +281,7 @@ if (command === 'config') {
     claude-cost-cry config --add-source "openai:/path/to/api-logs"
   `);
 } else {
-  const { main } = await import('../src/index.js');
+  const { main } = await import('../dist/index.js');
   main().catch((err) => {
     console.error('치명적 오류:', err.message);
     process.exit(1);

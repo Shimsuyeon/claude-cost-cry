@@ -4,28 +4,21 @@ import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
 import { getProvider } from './providers/index.js';
-import claude from './providers/claude.js';
+import type { Config, Usage, LogSource, Provider } from './types.js';
 
 const CLAUDE_DIR = join(homedir(), '.claude', 'projects');
 
-export function getClaudeProjectsDir() {
+export function getClaudeProjectsDir(): string {
   return CLAUDE_DIR;
 }
 
-/**
- * 로그 소스 목록을 빌드한다.
- * Claude Code는 항상 자동 포함, logSources에 추가된 것들도 포함.
- * API 기반 프로바이더(예: Cursor)는 isApi: true 로 표시.
- */
-export function buildLogSources(config) {
-  const sources = [];
+export function buildLogSources(config: Config): LogSource[] {
+  const sources: LogSource[] = [];
 
-  // Claude Code는 항상 기본 포함
   if (existsSync(CLAUDE_DIR)) {
     sources.push({ provider: 'claude', path: CLAUDE_DIR });
   }
 
-  // 사용자 설정 로그 소스 추가
   for (const src of (config?.logSources || [])) {
     if (!src.provider) continue;
 
@@ -48,7 +41,7 @@ export function buildLogSources(config) {
   return sources;
 }
 
-function parseLine(line) {
+function parseLine(line: string): Record<string, unknown> | null {
   const trimmed = line.trim();
   if (!trimmed) return null;
   try {
@@ -58,10 +51,10 @@ function parseLine(line) {
   }
 }
 
-function parseWithProvider(content, provider) {
+function parseWithProvider(content: string, provider: Provider): Usage[] {
   const lines = content.split('\n');
-  const usages = [];
-  let lastUserText = null;
+  const usages: Usage[] = [];
+  let lastUserText: string | null = null;
 
   for (const line of lines) {
     const entry = parseLine(line);
@@ -80,18 +73,17 @@ function parseWithProvider(content, provider) {
   return usages;
 }
 
-export async function scanToday(config) {
+export async function scanToday(config: Config): Promise<{ usages: Usage[]; fileOffsets: Map<string, number> }> {
   const sources = buildLogSources(config);
   if (sources.length === 0) {
     return { usages: [], fileOffsets: new Map() };
   }
 
-  const usages = [];
-  const fileOffsets = new Map();
+  const usages: Usage[] = [];
+  const fileOffsets = new Map<string, number>();
   const todayStart = getTodayStart();
 
   for (const source of sources) {
-    // API 기반 프로바이더 (예: Cursor) — 서버 API 폴링
     if (source.isApi) {
       const apiProvider = getProvider(source.provider);
       if (apiProvider?.scanToday) {
@@ -108,7 +100,7 @@ export async function scanToday(config) {
     const provider = getProvider(source.provider);
     if (!provider) continue;
 
-    const files = await findJsonlFiles(source.path);
+    const files = await findJsonlFiles(source.path!);
 
     for (const filePath of files) {
       try {
@@ -123,7 +115,7 @@ export async function scanToday(config) {
           }
         }
       } catch {
-        // 읽을 수 없는 파일은 무시
+        // skip
       }
     }
   }
@@ -131,19 +123,24 @@ export async function scanToday(config) {
   return { usages, fileOffsets };
 }
 
-// 파일별로 마지막 사용자 프롬프트를 추적
-const lastPromptByFile = new Map();
-// 파일 → 프로바이더 매핑
-const fileProviderMap = new Map();
+const lastPromptByFile = new Map<string, string>();
+const fileProviderMap = new Map<string, Provider>();
 
-export function startWatching(fileOffsets, onNewUsage, config) {
-  const sources = buildLogSources(config);
+interface Closeable {
+  close(): void;
+}
+
+export function startWatching(
+  fileOffsets: Map<string, number>,
+  onNewUsage: (usage: Usage) => void,
+  config?: Config,
+): Closeable | null {
+  const sources = buildLogSources(config!);
   if (sources.length === 0) return null;
 
-  const watchers = [];
+  const watchers: Closeable[] = [];
 
   for (const source of sources) {
-    // API 기반 프로바이더 — 주기적 폴링
     if (source.isApi) {
       const apiProvider = getProvider(source.provider);
       if (apiProvider?.startPolling) {
@@ -154,9 +151,10 @@ export function startWatching(fileOffsets, onNewUsage, config) {
     }
 
     const provider = getProvider(source.provider);
-    if (!provider || !existsSync(source.path)) continue;
+    if (!provider || !existsSync(source.path!)) continue;
 
-    const watcher = watch(join(source.path, '**', '*.jsonl'), {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const watcher: any = watch(join(source.path!, '**', '*.jsonl'), {
       persistent: true,
       ignoreInitial: true,
       usePolling: true,
@@ -168,7 +166,7 @@ export function startWatching(fileOffsets, onNewUsage, config) {
       },
     });
 
-    watcher.on('change', async (filePath) => {
+    watcher.on('change', async (filePath: string) => {
       try {
         fileProviderMap.set(filePath, provider);
         const currentOffset = fileOffsets.get(filePath) || 0;
@@ -185,7 +183,7 @@ export function startWatching(fileOffsets, onNewUsage, config) {
         fileOffsets.set(filePath, fullBytes);
 
         const contentBuffer = Buffer.from(content, 'utf-8');
-        const newContent = contentBuffer.slice(currentOffset).toString('utf-8');
+        const newContent = contentBuffer.subarray(currentOffset).toString('utf-8');
         const lines = newContent.split('\n');
 
         for (const line of lines) {
@@ -202,24 +200,23 @@ export function startWatching(fileOffsets, onNewUsage, config) {
           }
         }
       } catch {
-        // 무시
+        // ignore
       }
     });
 
-    watcher.on('add', async (filePath) => {
+    watcher.on('add', async (filePath: string) => {
       try {
         const fileStat = await stat(filePath);
         fileOffsets.set(filePath, fileStat.size);
         fileProviderMap.set(filePath, provider);
       } catch {
-        // 무시
+        // ignore
       }
     });
 
     watchers.push(watcher);
   }
 
-  // 복합 watcher — close()로 전부 닫기
   return {
     close() {
       for (const w of watchers) w.close();
@@ -227,10 +224,10 @@ export function startWatching(fileOffsets, onNewUsage, config) {
   };
 }
 
-async function findJsonlFiles(dir) {
-  const files = [];
+async function findJsonlFiles(dir: string): Promise<string[]> {
+  const files: string[] = [];
 
-  async function walk(currentDir) {
+  async function walk(currentDir: string): Promise<void> {
     try {
       const entries = await readdir(currentDir, { withFileTypes: true });
       for (const entry of entries) {
@@ -242,7 +239,7 @@ async function findJsonlFiles(dir) {
         }
       }
     } catch {
-      // 접근할 수 없는 디렉토리는 무시
+      // skip
     }
   }
 
@@ -250,7 +247,7 @@ async function findJsonlFiles(dir) {
   return files;
 }
 
-function getTodayStart() {
+function getTodayStart(): number {
   const now = new Date();
   return new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
 }

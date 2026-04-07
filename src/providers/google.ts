@@ -1,4 +1,6 @@
-export default {
+import type { Provider, Usage, ModelPricing } from '../types.js';
+
+const provider: Provider = {
   name: 'google',
   displayName: 'Gemini',
   emoji: '🔵',
@@ -23,29 +25,24 @@ export default {
     { pattern: /gemini.*flash/i,     key: 'gemini-2.5-flash' },
   ],
 
-  resolveModel(modelName) {
-    for (const { pattern, key } of this.modelPatterns) {
+  resolveModel(modelName: string): ModelPricing {
+    for (const { pattern, key } of this.modelPatterns!) {
       if (pattern.test(modelName)) return this.models[key];
     }
     return this.models['gemini-2.5-flash'];
   },
 
-  getModelLabel(modelName) {
+  getModelLabel(modelName: string): string {
     return this.resolveModel(modelName).label;
   },
 
-  /**
-   * Gemini API 응답 형식에서 usage를 추출한다.
-   * Google AI Studio / Vertex AI 응답 형식:
-   *   { usageMetadata: { promptTokenCount, candidatesTokenCount, totalTokenCount } }
-   */
-  parseLogLine(entry) {
-    const usage = entry?.usageMetadata || entry?.usage;
+  parseLogLine(entry: unknown): Usage | null {
+    const e = entry as Record<string, unknown>;
+    const usage = (e?.usageMetadata || e?.usage) as Record<string, number> | undefined;
     if (!usage) return null;
 
-    const model = entry.model || entry.modelVersion || 'unknown';
-    const isGemini = /gemini/i.test(model);
-    if (!isGemini) return null;
+    const model = ((e.model || e.modelVersion) as string) || 'unknown';
+    if (!/gemini/i.test(model)) return null;
 
     return {
       provider: 'google',
@@ -54,25 +51,29 @@ export default {
       outputTokens: usage.candidatesTokenCount || usage.completion_tokens || usage.output_tokens || 0,
       cacheCreationTokens: 0,
       cacheReadTokens: usage.cachedContentTokenCount || 0,
-      timestamp: entry.timestamp || new Date().toISOString(),
-      sessionId: entry.id || 'unknown',
+      timestamp: (e.timestamp as string) || new Date().toISOString(),
+      sessionId: (e.id as string) || 'unknown',
     };
   },
 
-  extractUserText(entry) {
-    const parts = entry?.contents;
+  extractUserText(entry: unknown): string | null {
+    const e = entry as Record<string, unknown>;
+    const parts = e?.contents as Array<Record<string, unknown>> | undefined;
     if (!Array.isArray(parts)) return null;
     for (let i = parts.length - 1; i >= 0; i--) {
-      if (parts[i].role === 'user' && parts[i].parts?.[0]?.text) {
-        return parts[i].parts[0].text;
+      if (parts[i].role === 'user') {
+        const p = parts[i].parts as Array<Record<string, string>> | undefined;
+        if (p?.[0]?.text) return p[0].text;
       }
     }
     return null;
   },
 
-  calculateCost(usage) {
+  calculateCost(usage: Usage): number {
     const pricing = this.resolveModel(usage.model);
     return (usage.inputTokens / 1e6) * pricing.input
          + (usage.outputTokens / 1e6) * pricing.output;
   },
 };
+
+export default provider;

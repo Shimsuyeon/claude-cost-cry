@@ -1,7 +1,8 @@
 import { join } from 'node:path';
 import { homedir } from 'node:os';
+import type { Provider, Usage, ModelPricing } from '../types.js';
 
-export default {
+const provider: Provider = {
   name: 'claude',
   displayName: 'Claude',
   emoji: '🟣',
@@ -20,45 +21,44 @@ export default {
     { pattern: /haiku/i, key: 'haiku' },
   ],
 
-  resolveModel(modelName) {
-    for (const { pattern, key } of this.modelPatterns) {
+  resolveModel(modelName: string): ModelPricing {
+    for (const { pattern, key } of this.modelPatterns!) {
       if (pattern.test(modelName)) return this.models[key];
     }
-    return this.models.sonnet;
+    return this.models['sonnet'];
   },
 
-  getModelLabel(modelName) {
+  getModelLabel(modelName: string): string {
     return this.resolveModel(modelName).label;
   },
 
-  /**
-   * Claude Code JSONL 로그 라인에서 usage를 추출한다.
-   * 스트리밍 중간 엔트리(stop_reason null)는 건너뛴다.
-   */
-  parseLogLine(entry) {
-    if (entry?.type !== 'assistant') return null;
+  parseLogLine(entry: unknown): Usage | null {
+    const e = entry as Record<string, unknown>;
+    if (e?.type !== 'assistant') return null;
 
-    const message = entry.message;
+    const message = e.message as Record<string, unknown> | undefined;
     if (!message?.usage) return null;
     if (message.stop_reason === null || message.stop_reason === undefined) return null;
 
-    const usage = message.usage;
+    const usage = message.usage as Record<string, number>;
     return {
       provider: 'claude',
-      model: message.model || 'unknown',
+      model: (message.model as string) || 'unknown',
       inputTokens: usage.input_tokens || 0,
       outputTokens: usage.output_tokens || 0,
       cacheCreationTokens: usage.cache_creation_input_tokens || 0,
       cacheReadTokens: usage.cache_read_input_tokens || 0,
-      timestamp: entry.timestamp || new Date().toISOString(),
-      sessionId: entry.sessionId || 'unknown',
+      timestamp: (e.timestamp as string) || new Date().toISOString(),
+      sessionId: (e.sessionId as string) || 'unknown',
     };
   },
 
-  extractUserText(entry) {
-    if (entry?.type !== 'user') return null;
+  extractUserText(entry: unknown): string | null {
+    const e = entry as Record<string, unknown>;
+    if (e?.type !== 'user') return null;
 
-    const content = entry.message?.content;
+    const message = e.message as Record<string, unknown> | undefined;
+    const content = message?.content;
     if (typeof content === 'string') {
       const clean = content.replace(/<[^>]*>/gs, '').trim();
       return clean.length > 3 ? clean : null;
@@ -67,7 +67,7 @@ export default {
     if (Array.isArray(content)) {
       for (const block of content) {
         if (block.type === 'text') {
-          const clean = block.text.replace(/<[^>]*>/gs, '').trim();
+          const clean = (block.text as string).replace(/<[^>]*>/gs, '').trim();
           if (clean.length > 3) return clean;
         }
       }
@@ -76,11 +76,13 @@ export default {
     return null;
   },
 
-  calculateCost(usage) {
+  calculateCost(usage: Usage): number {
     const pricing = this.resolveModel(usage.model);
     return (usage.inputTokens / 1e6) * pricing.input
          + (usage.outputTokens / 1e6) * pricing.output
-         + (usage.cacheCreationTokens / 1e6) * pricing.cacheWrite
-         + (usage.cacheReadTokens / 1e6) * pricing.cacheRead;
+         + (usage.cacheCreationTokens / 1e6) * (pricing.cacheWrite || 0)
+         + (usage.cacheReadTokens / 1e6) * (pricing.cacheRead || 0);
   },
 };
+
+export default provider;

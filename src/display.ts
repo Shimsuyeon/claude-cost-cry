@@ -3,34 +3,42 @@ import { formatCostShort, formatTokenCount, toEquivalent, getSavingsNudge } from
 import { getMessage, getStartupMood } from './messages.js';
 import { formatLocalCost } from './exchange.js';
 import { getModelLabel as getProviderModelLabel, getProviderEmoji, getProviderDisplayName } from './providers/index.js';
+import type { Usage, Config, ExchangeInfo, BudgetStatus, TopRequest } from './types.js';
 
 const VERSION = '0.3.0';
 
 const DIVIDER = chalk.gray('─'.repeat(56));
 
-function fc(cost, ex) {
+function fc(cost: number, ex?: ExchangeInfo | null): string {
   return ex ? formatLocalCost(cost, ex) : formatCostShort(cost);
 }
 
-function resolveModelLabel(usage) {
+function resolveModelLabel(usage: Usage): string {
   if (usage.provider) return getProviderModelLabel(usage);
   return usage.model || 'Unknown';
 }
 
-function providerTag(providerName) {
+function providerTag(providerName?: string): string {
   if (!providerName) return '';
   const emoji = getProviderEmoji(providerName);
   return `${emoji} `;
 }
 
-export function showBanner() {
+export function showBanner(): void {
   console.log();
   console.log(chalk.bold(`  🪙 claude-cost-cry v${VERSION}`));
   console.log(chalk.gray('  당신의 API 비용을 감정적으로 체감시켜드립니다'));
   console.log();
 }
 
-export function showTodaySummary(totalCost, callCount, budgetStatus, config, exchange, costByProvider) {
+export function showTodaySummary(
+  totalCost: number,
+  callCount: number,
+  budgetStatus: BudgetStatus | null,
+  config: Config,
+  exchange: ExchangeInfo | null,
+  costByProvider?: Record<string, number>,
+): void {
   const mood = getStartupMood(totalCost);
   const equiv = toEquivalent(totalCost, config);
   const equivText = equiv
@@ -71,33 +79,24 @@ export function showTodaySummary(totalCost, callCount, budgetStatus, config, exc
   console.log();
 }
 
-export function showBudgetBar(totalCost, budgetStatus, exchange) {
+export function showBudgetBar(totalCost: number, budgetStatus: BudgetStatus, exchange: ExchangeInfo | null): void {
   const { ratio, status, budget, remaining } = budgetStatus;
   const barWidth = 30;
   const filled = Math.round(ratio * barWidth);
   const empty = barWidth - filled;
 
-  let barColor;
-  let statusIcon;
-  if (status === 'exceeded') {
-    barColor = chalk.bgRed.white;
-    statusIcon = '🚫';
-  } else if (status === 'danger') {
-    barColor = chalk.bgRedBright.black;
-    statusIcon = '🔴';
-  } else if (status === 'warning') {
-    barColor = chalk.bgYellow.black;
-    statusIcon = '🟡';
-  } else {
-    barColor = chalk.bgGreen.black;
-    statusIcon = '🟢';
-  }
+  let barColor: typeof chalk;
+  let statusIcon: string;
+  if (status === 'exceeded') { barColor = chalk.bgRed.white; statusIcon = '🚫'; }
+  else if (status === 'danger') { barColor = chalk.bgRedBright.black; statusIcon = '🔴'; }
+  else if (status === 'warning') { barColor = chalk.bgYellow.black; statusIcon = '🟡'; }
+  else { barColor = chalk.bgGreen.black; statusIcon = '🟢'; }
 
   const bar = barColor('█'.repeat(filled)) + chalk.gray('░'.repeat(empty));
   const pct = Math.round(ratio * 100);
 
   console.log(`  ${statusIcon} 예산: ${bar} ${pct}%`);
-  console.log(chalk.gray(`     ${fc(totalCost, exchange)} / ${fc(budget, exchange)} (잔여: ${fc(remaining, exchange)})`));
+  console.log(chalk.gray(`     ${fc(totalCost, exchange)} / ${fc(budget!, exchange)} (잔여: ${fc(remaining!, exchange)})`));
 
   if (status === 'exceeded') {
     console.log(chalk.red.bold(`     🚫 일일 예산을 초과했습니다!`));
@@ -108,7 +107,7 @@ export function showBudgetBar(totalCost, budgetStatus, exchange) {
   }
 }
 
-export function showCostUpdate(usage, cost, totalCost, config, exchange) {
+export function showCostUpdate(usage: Usage, cost: number, totalCost: number, config: Config, exchange: ExchangeInfo | null): void {
   const now = new Date();
   const timeStr = chalk.gray(
     `[${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}]`
@@ -157,18 +156,18 @@ export function showCostUpdate(usage, cost, totalCost, config, exchange) {
   console.log();
 }
 
-export function showBudgetAlert(budgetStatus, exchange) {
+export function showBudgetAlert(budgetStatus: BudgetStatus, exchange: ExchangeInfo | null): void {
   const { status } = budgetStatus;
   if (status === 'exceeded') {
     console.log(chalk.bgRed.white.bold('  🚫 일일 예산 초과! 🚫  '));
     console.log();
   } else if (status === 'danger') {
-    console.log(chalk.red(`  🔴 예산 90% 도달 — 남은 예산: ${fc(budgetStatus.remaining, exchange)}`));
+    console.log(chalk.red(`  🔴 예산 90% 도달 — 남은 예산: ${fc(budgetStatus.remaining!, exchange)}`));
     console.log();
   }
 }
 
-export function showTopExpensive(topRequests, exchange) {
+export function showTopExpensive(topRequests: TopRequest[], exchange: ExchangeInfo | null): void {
   if (!topRequests || topRequests.length === 0) return;
 
   console.log();
@@ -187,16 +186,22 @@ export function showTopExpensive(topRequests, exchange) {
     const timeStr = req.time || '';
 
     console.log(`  ${medal} ${chalk.bold.yellow(fc(req.cost, exchange))}  ${pEmoji}${modelColor(req.model)}  ${chalk.gray(timeStr)}`);
-
     if (req.prompt) {
       console.log(chalk.white(`     💬 "${req.prompt}"`));
     }
-
     console.log(chalk.gray(`     📥 ${formatTokenCount(req.inputTokens)} 📤 ${formatTokenCount(req.outputTokens)}`));
   });
 }
 
-export function showShutdown(sessionCost, totalCost, savingsTotal, topRequests, config, exchange, costByProvider) {
+export function showShutdown(
+  sessionCost: number,
+  totalCost: number,
+  savingsTotal: number,
+  topRequests: TopRequest[],
+  config: Config,
+  exchange: ExchangeInfo | null,
+  costByProvider?: Record<string, number>,
+): void {
   console.log();
   console.log(DIVIDER);
 
@@ -228,14 +233,14 @@ export function showShutdown(sessionCost, totalCost, savingsTotal, topRequests, 
   console.log();
 }
 
-export function showError(message) {
+export function showError(message: string): void {
   console.error(chalk.red(`  ❌ ${message}`));
 }
 
-export function showInfo(message) {
+export function showInfo(message: string): void {
   console.log(chalk.gray(`  ℹ️  ${message}`));
 }
 
-export function showConfigUpdate(key, value) {
+export function showConfigUpdate(key: string, value: string | number): void {
   console.log(chalk.green(`  ✅ ${key} = ${value}`));
 }

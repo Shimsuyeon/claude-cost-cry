@@ -1,22 +1,23 @@
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
+import type { Config, ExchangeInfo } from './types.js';
 
 const CACHE_DIR = join(homedir(), '.claude-cost-cry');
 const CACHE_PATH = join(CACHE_DIR, 'exchange-cache.json');
 const API_URL = 'https://api.frankfurter.app/latest?from=USD';
-const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24시간
+const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 
-const CURRENCY_SYMBOLS = {
-  USD: '$',
-  KRW: '₩',
-  JPY: '¥',
-  EUR: '€',
-  GBP: '£',
-  CNY: '¥',
+const CURRENCY_SYMBOLS: Record<string, string> = {
+  USD: '$', KRW: '₩', JPY: '¥', EUR: '€', GBP: '£', CNY: '¥',
 };
 
-function loadCache() {
+interface CacheData {
+  rates: Record<string, number>;
+  timestamp: number;
+}
+
+function loadCache(): CacheData | null {
   try {
     return JSON.parse(readFileSync(CACHE_PATH, 'utf-8'));
   } catch {
@@ -24,12 +25,12 @@ function loadCache() {
   }
 }
 
-function saveCache(data) {
+function saveCache(data: CacheData): void {
   mkdirSync(CACHE_DIR, { recursive: true });
   writeFileSync(CACHE_PATH, JSON.stringify(data, null, 2) + '\n', 'utf-8');
 }
 
-async function fetchRates() {
+async function fetchRates(): Promise<Record<string, number> | null> {
   try {
     const res = await fetch(API_URL);
     if (!res.ok) return null;
@@ -40,15 +41,10 @@ async function fetchRates() {
   }
 }
 
-/**
- * 환율을 가져온다 (캐시 우선, 만료 시 API 조회).
- * config.exchangeRate가 있으면 수동 오버라이드.
- */
-export async function getExchangeRate(config) {
+export async function getExchangeRate(config: Config): Promise<ExchangeInfo> {
   const currency = config?.currency || 'USD';
   if (currency === 'USD') return { rate: 1, symbol: '$', currency: 'USD', source: 'base' };
 
-  // 수동 오버라이드
   if (config?.exchangeRate) {
     return {
       rate: config.exchangeRate,
@@ -58,7 +54,6 @@ export async function getExchangeRate(config) {
     };
   }
 
-  // 캐시 확인
   const cache = loadCache();
   const now = Date.now();
 
@@ -72,10 +67,9 @@ export async function getExchangeRate(config) {
     };
   }
 
-  // API 조회
   const rates = await fetchRates();
   if (rates && rates[currency]) {
-    const cacheData = { rates, timestamp: now };
+    const cacheData: CacheData = { rates, timestamp: now };
     saveCache(cacheData);
     return {
       rate: rates[currency],
@@ -86,7 +80,6 @@ export async function getExchangeRate(config) {
     };
   }
 
-  // API 실패 → 만료된 캐시라도 사용
   if (cache?.rates?.[currency]) {
     return {
       rate: cache.rates[currency],
@@ -97,14 +90,10 @@ export async function getExchangeRate(config) {
     };
   }
 
-  // 아무것도 없으면 USD 폴백
   return { rate: 1, symbol: '$', currency: 'USD', source: 'fallback' };
 }
 
-/**
- * USD 금액을 현지 통화로 변환하여 포맷한다.
- */
-export function formatLocalCost(usdCost, exchangeInfo) {
+export function formatLocalCost(usdCost: number, exchangeInfo: ExchangeInfo): string {
   if (!exchangeInfo || exchangeInfo.currency === 'USD') {
     if (usdCost < 0.01) return `$${usdCost.toFixed(4)}`;
     if (usdCost < 1) return `$${usdCost.toFixed(3)}`;
@@ -121,7 +110,7 @@ export function formatLocalCost(usdCost, exchangeInfo) {
   return `${sym}${local.toFixed(2)}`;
 }
 
-export function getCurrencySymbol(currency) {
+export function getCurrencySymbol(currency: string): string {
   return CURRENCY_SYMBOLS[currency] || currency;
 }
 

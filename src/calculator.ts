@@ -1,11 +1,8 @@
 import { getPricing, EQUIVALENTS } from './pricing.js';
 import { calculateCost as providerCalculateCost, getProvider } from './providers/index.js';
+import type { Usage, Config, EquivalentResult, SavingsNudge } from './types.js';
 
-/**
- * usage 데이터로부터 비용을 계산한다 (USD).
- * provider가 있으면 프로바이더 시스템 사용, 없으면 레거시 호환.
- */
-export function calculateCost(usage) {
+export function calculateCost(usage: Usage): number {
   if (usage.provider) {
     return providerCalculateCost(usage);
   }
@@ -13,26 +10,26 @@ export function calculateCost(usage) {
   const pricing = getPricing(usage.model);
   return (usage.inputTokens / 1e6) * pricing.input
        + (usage.outputTokens / 1e6) * pricing.output
-       + (usage.cacheCreationTokens / 1e6) * pricing.cacheWrite
-       + (usage.cacheReadTokens / 1e6) * pricing.cacheRead;
+       + (usage.cacheCreationTokens / 1e6) * (pricing.cacheWrite || 0)
+       + (usage.cacheReadTokens / 1e6) * (pricing.cacheRead || 0);
 }
 
-export function formatCost(cost) {
+export function formatCost(cost: number): string {
   return `$${cost.toFixed(4)}`;
 }
 
-export function formatCostShort(cost) {
+export function formatCostShort(cost: number): string {
   if (cost < 0.01) return `$${cost.toFixed(4)}`;
   if (cost < 1) return `$${cost.toFixed(3)}`;
   return `$${cost.toFixed(2)}`;
 }
 
-export function getAllEquivalents(config) {
+export function getAllEquivalents(config: Config) {
   const custom = config?.customEquivalents || [];
   return [...custom, ...EQUIVALENTS];
 }
 
-export function toEquivalent(cost, config) {
+export function toEquivalent(cost: number, config: Config): EquivalentResult | null {
   if (cost < 0.01) return null;
 
   const allItems = getAllEquivalents(config);
@@ -55,25 +52,22 @@ export function toEquivalent(cost, config) {
   return { ...allItems[0], count: Math.round((cost / allItems[0].price) * 10) / 10 };
 }
 
-export function formatTokenCount(n) {
+export function formatTokenCount(n: number): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
   if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
   return String(n);
 }
 
-/**
- * 같은 프로바이더 내에서 다른 모델을 썼을 때의 비용을 계산한다.
- */
-export function getSavingsNudge(usage, actualCost) {
+export function getSavingsNudge(usage: Usage, actualCost: number): SavingsNudge | null {
   const provider = usage.provider ? getProvider(usage.provider) : null;
   if (!provider) return null;
 
   const models = provider.models;
   const currentLabel = provider.getModelLabel(usage.model).toLowerCase();
 
-  let bestSaving = null;
+  let bestSaving: SavingsNudge | null = null;
 
-  for (const [key, pricing] of Object.entries(models)) {
+  for (const [, pricing] of Object.entries(models)) {
     if (pricing.label.toLowerCase() === currentLabel) continue;
 
     const totalInput = usage.inputTokens + usage.cacheCreationTokens + usage.cacheReadTokens;
