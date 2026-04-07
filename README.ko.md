@@ -157,7 +157,7 @@ Claude Code는 API 호출 로그를 `~/.claude/projects/` 아래에 JSONL 파일
 
 ## 후원
 
-이 도구가 심장마비를 막아줬다면, 커피 한 잔 사주세요:
+이 도구가 당신의 지갑을 지켜줬다면... 실례가 안된다면 커피 한 잔만 부탁드려도 되겠습니까?
 
 [![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-ffdd00?style=flat&logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/shimsuyeon)
 
