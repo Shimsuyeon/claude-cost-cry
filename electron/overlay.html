@@ -402,12 +402,81 @@
     text-align: center;
     padding: 12px 0;
   }
+
+  /* ── Chart panel ── */
+  .chart-panel.open { max-height: 260px; }
+
+  .chart-panel-title {
+    font-size: 11px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.5);
+    margin-bottom: 8px;
+  }
+
+  .chart-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 3px;
+  }
+
+  .chart-date {
+    font-size: 9px;
+    color: rgba(255, 255, 255, 0.35);
+    width: 40px;
+    text-align: right;
+    flex-shrink: 0;
+  }
+
+  .chart-bar-bg {
+    flex: 1;
+    height: 8px;
+    background: rgba(255, 255, 255, 0.04);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  .chart-bar-fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.4s ease;
+    min-width: 0;
+  }
+
+  .chart-bar-fill.low { background: #8be88b; }
+  .chart-bar-fill.mid { background: #ffd966; }
+  .chart-bar-fill.high { background: #ff5555; }
+
+  .chart-cost {
+    font-size: 9px;
+    color: rgba(255, 255, 255, 0.4);
+    width: 36px;
+    text-align: right;
+    flex-shrink: 0;
+  }
+
+  .chart-stats {
+    margin-top: 8px;
+    padding-top: 6px;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+  }
+
+  .chart-stat-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 10px;
+    margin-bottom: 2px;
+  }
+
+  .chart-stat-label { color: rgba(255, 255, 255, 0.4); }
+  .chart-stat-value { color: rgba(255, 255, 255, 0.7); font-weight: 600; }
 </style>
 </head>
 <body>
 
 <div class="widget tier-peace" id="widget">
   <div class="toolbar">
+    <div class="tool-btn" id="chartBtn" title="주간 리포트">📊</div>
     <div class="tool-btn" id="topBtn" title="비싼 요청 TOP 3">🏆</div>
     <div class="tool-btn" id="gearBtn" title="설정">⚙</div>
   </div>
@@ -435,6 +504,13 @@
   </div>
 
   <div class="nudge" id="nudge"></div>
+
+  <!-- Chart Panel -->
+  <div class="panel chart-panel" id="chartPanel">
+    <div class="panel-divider"></div>
+    <div class="chart-panel-title">📊 주간 비용 추이</div>
+    <div id="chartBody"></div>
+  </div>
 
   <!-- TOP 3 Panel -->
   <div class="panel top-panel" id="topPanel">
@@ -479,8 +555,11 @@
   const nudgeEl = document.getElementById('nudge');
   const gearBtn = document.getElementById('gearBtn');
   const topBtn = document.getElementById('topBtn');
+  const chartBtn = document.getElementById('chartBtn');
   const settingsPanel = document.getElementById('settingsPanel');
   const topPanel = document.getElementById('topPanel');
+  const chartPanel = document.getElementById('chartPanel');
+  const chartBody = document.getElementById('chartBody');
   const topList = document.getElementById('topList');
   const budgetInput = document.getElementById('budgetInput');
   const nudgeToggle = document.getElementById('nudgeToggle');
@@ -510,8 +589,10 @@
   function closeAllPanels() {
     settingsPanel.classList.remove('open');
     topPanel.classList.remove('open');
+    chartPanel.classList.remove('open');
     gearBtn.classList.remove('active');
     topBtn.classList.remove('active');
+    chartBtn.classList.remove('active');
     activePanel = null;
     window.bridge.resizeWidget(false);
   }
@@ -527,6 +608,10 @@
       topPanel.classList.add('open');
       topBtn.classList.add('active');
       renderTopList();
+    } else if (name === 'chart') {
+      chartPanel.classList.add('open');
+      chartBtn.classList.add('active');
+      loadChart();
     }
 
     window.bridge.resizeWidget(true);
@@ -543,6 +628,14 @@
     saveBtn.textContent = '저장';
     saveBtn.classList.remove('saved');
     openPanel('settings');
+  });
+
+  chartBtn.addEventListener('click', () => {
+    if (activePanel === 'chart') {
+      closeAllPanels();
+      return;
+    }
+    openPanel('chart');
   });
 
   topBtn.addEventListener('click', () => {
@@ -581,6 +674,56 @@
     }).join('');
   }
 
+  // ── Chart ──
+
+  async function loadChart() {
+    chartBody.innerHTML = '<div class="top-empty">로딩 중...</div>';
+    const report = await window.bridge.getReport(7);
+
+    if (!report.dailyData || report.dailyData.length === 0) {
+      chartBody.innerHTML = '<div class="top-empty">데이터가 없습니다</div>';
+      return;
+    }
+
+    const maxCost = Math.max(...report.dailyData.map(d => d.cost), 0.01);
+
+    let html = report.dailyData.map(d => {
+      const pct = Math.round((d.cost / maxCost) * 100);
+      const barClass = pct >= 80 ? 'high' : pct >= 50 ? 'mid' : 'low';
+      const costStr = d.cost > 0 ? formatCost(d.cost) : '·';
+      return `
+        <div class="chart-row">
+          <span class="chart-date">${d.date} ${d.day}</span>
+          <div class="chart-bar-bg">
+            <div class="chart-bar-fill ${barClass}" style="width:${pct}%"></div>
+          </div>
+          <span class="chart-cost">${costStr}</span>
+        </div>
+      `;
+    }).join('');
+
+    if (report.stats) {
+      html += `
+        <div class="chart-stats">
+          <div class="chart-stat-row">
+            <span class="chart-stat-label">총 비용</span>
+            <span class="chart-stat-value">${formatCost(report.stats.totalCost)}</span>
+          </div>
+          <div class="chart-stat-row">
+            <span class="chart-stat-label">일 평균</span>
+            <span class="chart-stat-value">${formatCost(report.stats.avgDaily)}</span>
+          </div>
+          <div class="chart-stat-row">
+            <span class="chart-stat-label">총 호출</span>
+            <span class="chart-stat-value">${report.stats.totalCalls}건</span>
+          </div>
+        </div>
+      `;
+    }
+
+    chartBody.innerHTML = html;
+  }
+
   // ── Settings save ──
 
   saveBtn.addEventListener('click', async () => {
@@ -616,6 +759,7 @@
 
     if (activePanel === 'settings') gearBtn.classList.add('active');
     if (activePanel === 'top') topBtn.classList.add('active');
+    if (activePanel === 'chart') chartBtn.classList.add('active');
 
     if (data.tier) emojiEl.textContent = data.tier.emoji;
     costEl.textContent = formatCost(data.totalCost);

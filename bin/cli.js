@@ -46,6 +46,19 @@ if (command === 'config') {
         process.exit(1);
     }
   }
+} else if (command === 'report') {
+  const { showWeeklyReport, showMonthlyReport } = await import('../src/report.js');
+  const { showBanner } = await import('../src/display.js');
+
+  showBanner();
+
+  const isMonthly = args.includes('--monthly') || args.includes('-m');
+
+  if (isMonthly) {
+    await showMonthlyReport();
+  } else {
+    await showWeeklyReport();
+  }
 } else if (args.includes('--overlay') || args.includes('-o')) {
   const { execFile } = await import('node:child_process');
   const { createRequire } = await import('node:module');
@@ -81,6 +94,8 @@ if (command === 'config') {
     claude-cost-cry --overlay           오버레이 모드 (화면 위 플로팅 위젯)
     claude-cost-cry config              현재 설정 보기
     claude-cost-cry config [옵션]       설정 변경
+    claude-cost-cry report              주간 리포트
+    claude-cost-cry report --monthly    월간 리포트
 
   설정 옵션:
     --daily-budget <금액>    일일 예산 설정 (USD). 해제: --daily-budget off

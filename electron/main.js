@@ -262,6 +262,11 @@ app.whenReady().then(async () => {
     return config;
   });
 
+  ipcMain.handle('get-report', async (_e, days) => {
+    const { getReportData } = await import('../src/report.js');
+    return getReportData(days || 7);
+  });
+
   ipcMain.on('resize-widget', (_e, expanded) => {
     if (!overlay) return;
     const h = expanded ? WIDGET_HEIGHT_EXPANDED : WIDGET_HEIGHT;
