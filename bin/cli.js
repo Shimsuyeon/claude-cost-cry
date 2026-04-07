@@ -55,7 +55,7 @@ if (command === 'config') {
     console.log(`  사용 가능한 단위: ${allItems.map(e => e.name).join(', ')}`);
     console.log(`  지원 통화: ${SUPPORTED_CURRENCIES.join(', ')}`);
     console.log();
-    showInfo('설정 변경: claude-cost-cry config --daily-budget 10');
+    showInfo('설정 변경: cost-cry config --daily-budget 10');
     console.log();
     process.exit(0);
   }
@@ -143,7 +143,6 @@ if (command === 'config') {
         const colonIdx = value.indexOf(':');
 
         if (colonIdx === -1) {
-          // API 기반 프로바이더 (경로 불필요, 예: "cursor")
           const provider = gp(value);
           if (!provider) {
             console.error(`  ❌ 알 수 없는 프로바이더: ${value}. 지원: ${getProviderNames().join(', ')}`);
@@ -173,7 +172,6 @@ if (command === 'config') {
           break;
         }
 
-        // 파일 기반 프로바이더 (경로 필요)
         const srcProvider = value.slice(0, colonIdx);
         const srcPath = value.slice(colonIdx + 1);
         if (!getProviderNames().includes(srcProvider)) {
@@ -222,8 +220,53 @@ if (command === 'config') {
   } else {
     await showWeeklyReport();
   }
-} else if (args.includes('--overlay') || args.includes('-o')) {
-  const { execFile } = await import('node:child_process');
+} else if (command === 'cli') {
+  const { main } = await import('../dist/index.js');
+  main().catch((err) => {
+    console.error('치명적 오류:', err.message);
+    process.exit(1);
+  });
+} else if (args.includes('--help') || args.includes('-h')) {
+  showHelp();
+} else {
+  launchOverlay();
+}
+
+function showHelp() {
+  console.log(`
+  🪙 cost-cry — 당신의 API 비용을 감정적으로 체감시켜주는 도구
+
+  사용법:
+    cost-cry                            오버레이 실행 (화면 위 플로팅 위젯)
+    cost-cry cli                        CLI 모드 (터미널에서 실시간 추적)
+    cost-cry config                     현재 설정 보기
+    cost-cry config [옵션]              설정 변경
+    cost-cry report                     주간 리포트
+    cost-cry report --monthly           월간 리포트
+
+  설정 옵션:
+    --daily-budget <금액>      일일 예산 설정 (USD). 해제: --daily-budget off
+    --monthly-budget <금액>    월간 예산 설정 (USD). 해제: --monthly-budget off
+    --nudge <on|off>           모델 절약 넛지 표시 여부
+    --unit <이름|auto>         환산 단위 고정 (예: 치킨). 자동: --unit auto
+    --add-unit "이름:가격:이모지:단위"  커스텀 환산 단위 추가
+    --remove-unit <이름>       커스텀 환산 단위 삭제
+    --currency <코드>          표시 통화 (USD, KRW, JPY, EUR, GBP, CNY)
+    --exchange-rate <숫자|auto> 환율 수동 고정. 자동: --exchange-rate auto
+    --add-source "프로바이더:경로"  로그 소스 추가 (openai, google)
+    --add-source cursor            Cursor IDE 사용량 추적 (API 폴링)
+    --remove-source <프로바이더>    로그 소스 삭제
+  
+  예시:
+    cost-cry config --daily-budget 10
+    cost-cry config --unit 치킨
+    cost-cry config --currency KRW
+    cost-cry config --add-source cursor
+  `);
+}
+
+async function launchOverlay() {
+  const { spawn } = await import('node:child_process');
   const { createRequire } = await import('node:module');
   const { fileURLToPath } = await import('node:url');
   const path = await import('node:path');
@@ -241,49 +284,14 @@ if (command === 'config') {
   }
 
   const appPath = path.join(__dirname, '..', 'electron');
-  const child = execFile(electronPath, [appPath], { stdio: 'inherit' });
 
-  child.on('close', (code) => process.exit(code || 0));
-  child.on('error', (err) => {
-    console.error('❌ Electron 실행 실패:', err.message);
-    process.exit(1);
+  const child = spawn(electronPath, [appPath], {
+    detached: true,
+    stdio: 'ignore',
   });
-} else if (args.includes('--help') || args.includes('-h')) {
-  console.log(`
-  🪙 claude-cost-cry — 당신의 API 비용을 감정적으로 체감시켜주는 도구
 
-  사용법:
-    claude-cost-cry                     CLI 모드 (터미널에서 실시간 추적)
-    claude-cost-cry --overlay           오버레이 모드 (화면 위 플로팅 위젯)
-    claude-cost-cry config              현재 설정 보기
-    claude-cost-cry config [옵션]       설정 변경
-    claude-cost-cry report              주간 리포트
-    claude-cost-cry report --monthly    월간 리포트
+  child.unref();
 
-  설정 옵션:
-    --daily-budget <금액>      일일 예산 설정 (USD). 해제: --daily-budget off
-    --monthly-budget <금액>    월간 예산 설정 (USD). 해제: --monthly-budget off
-    --nudge <on|off>           모델 절약 넛지 표시 여부
-    --unit <이름|auto>         환산 단위 고정 (예: 치킨). 자동: --unit auto
-    --add-unit "이름:가격:이모지:단위"  커스텀 환산 단위 추가
-    --remove-unit <이름>       커스텀 환산 단위 삭제
-    --currency <코드>          표시 통화 (USD, KRW, JPY, EUR, GBP, CNY)
-    --exchange-rate <숫자|auto> 환율 수동 고정. 자동: --exchange-rate auto
-    --add-source "프로바이더:경로"  로그 소스 추가 (openai, google)
-    --add-source cursor            Cursor IDE 사용량 추적 (API 폴링)
-    --remove-source <프로바이더>    로그 소스 삭제
-  
-  예시:
-    claude-cost-cry config --daily-budget 10
-    claude-cost-cry config --unit 치킨
-    claude-cost-cry config --currency KRW
-    claude-cost-cry config --add-source cursor
-    claude-cost-cry config --add-source "openai:/path/to/api-logs"
-  `);
-} else {
-  const { main } = await import('../dist/index.js');
-  main().catch((err) => {
-    console.error('치명적 오류:', err.message);
-    process.exit(1);
-  });
+  console.log('🪙 cost-cry 위젯이 실행되었습니다. (트레이 아이콘 확인)');
+  process.exit(0);
 }

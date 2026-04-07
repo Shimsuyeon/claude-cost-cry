@@ -4,7 +4,8 @@
   "description": "당신의 Claude API 비용을 감정적으로 체감시켜주는 도구",
   "type": "module",
   "bin": {
-    "claude-cost-cry": "./bin/cli.js"
+    "claude-cost-cry": "./bin/cli.js",
+    "cost-cry": "./bin/cli.js"
   },
   "main": "dist/index.js",
   "scripts": {
@@ -31,11 +32,11 @@
   },
   "dependencies": {
     "chalk": "^5.4.1",
-    "chokidar": "^4.0.3"
+    "chokidar": "^4.0.3",
+    "electron": "^41.1.1"
   },
   "devDependencies": {
     "@types/node": "^25.5.2",
-    "electron": "^41.1.1",
     "typescript": "^6.0.2"
   }
 }
