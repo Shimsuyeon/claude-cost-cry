@@ -4,7 +4,7 @@
 
 Numbers feel numb. But **when your API bill becomes iced americanos and fried chicken, it hurts.**
 
-[한국어](#-한국어)
+[한국어](README.ko.md)
 
 ## What is this?
 
@@ -172,58 +172,3 @@ Cost calculations are **estimates for reference**. For exact billing, check the 
 
 MIT
 
----
-
-## 🇰🇷 한국어
-
-> 당신의 API 비용을 감정적으로 체감시켜주는 도구
-
-숫자로 보면 무감각한 API 비용을, **아이스 아메리카노와 치킨으로 환산하면 아프다.**
-
-### 설치
-
-```bash
-npm install -g claude-cost-cry
-```
-
-### 사용법
-
-```bash
-cost-cry                    # 오버레이 위젯 실행 (기본)
-cost-cry cli                # CLI 모드 (터미널 실시간 추적)
-cost-cry report             # 주간 리포트
-cost-cry report --monthly   # 월간 리포트
-cost-cry config             # 설정 보기
-```
-
-### 설정
-
-```bash
-cost-cry config --daily-budget 10     # 일일 예산 $10 설정
-cost-cry config --currency KRW        # 표시 통화 변경
-cost-cry config --language ko         # 한국어로 전환
-cost-cry config --add-source cursor   # Cursor IDE 추적
-cost-cry config --nudge off           # 절약 넛지 끄기
-```
-
-### 비용 구간별 감정 이펙트
-
-| 비용 구간 | 이모지 | 기분 | 메시지 예시 |
-|-----------|-------|------|------------|
-| $0 ~ $1 | 🪙 | 평화 | "아직 괜찮아요, 이 정도는 공기값이죠" |
-| $1 ~ $5 | 💸 | 불안 | "슬슬 자판기 커피값이 되어가네요..." |
-| $5 ~ $10 | 🔥 | 걱정 | "이거 진짜 괜찮은 건가요...?" |
-| $10 ~ $30 | 🚨 | 경고 | "클로드한테 월급을 주는 건가..." |
-| $30 ~ $100 | 💀 | 공포 | "은행 잔고가 비명을 지르고 있습니다" |
-| $100+ | ⚰️ | 장례식 | "🚨 경고: 이 API 키는 불에 타고 있습니다 🚨" |
-
-### 지원 프로바이더
-
-- 🟣 **Claude Code** — 자동 (로컬 JSONL 로그)
-- ⚡ **Cursor IDE** — API 폴링
-- 🟢 **OpenAI** — 로컬 로그
-- 🔵 **Google Gemini** — 로컬 로그
-
-### 면책 조항
-
-이 도구의 비용 계산은 **참고용**입니다. 정확한 과금 금액은 [Anthropic 대시보드](https://console.anthropic.com/)에서 확인하세요.
