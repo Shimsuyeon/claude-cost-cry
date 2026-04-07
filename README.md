@@ -1,153 +1,229 @@
 # 🪙 claude-cost-cry
 
-> 당신의 Claude API 비용을 감정적으로 체감시켜주는 도구
+> Emotionally experience your API costs
 
-숫자로 보면 무감각한 API 비용을, **아이스 아메리카노와 치킨으로 환산하면 아프다.**
+Numbers feel numb. But **when your API bill becomes iced americanos and fried chicken, it hurts.**
 
-## 뭐하는 도구인가요?
+[한국어](#-한국어)
 
-Claude Code를 사용할 때 실시간으로 비용을 추적하면서, 돈이 날아가는 순간을 감정적으로 체감시켜줍니다.
+## What is this?
+
+A real-time cost tracker for Claude Code (and other LLM providers) that makes you *feel* every dollar leaving your wallet — with emotional messages, everyday equivalents, and a floating desktop widget.
 
 ```
-$ claude-cost-cry
+$ cost-cry
 
-  🪙 claude-cost-cry v0.1.0
-  당신의 API 비용을 감정적으로 체감시켜드립니다
+  🪙 claude-cost-cry v0.3.0
+  Emotionally experience your API costs
 
-  📊 오늘 누적: $2.41 (☕ 아이스 아메리카노 0.5잔)
-     API 호출 12건
-     슬슬 지갑이 가벼워지고 있어요...
+  📊 Today's total: $2.41 (☕ Iced Americano 0.5)
+     12 API calls
+     🌤️ Starting to spend a bit...
 
   ────────────────────────────────────────────────────────
-  감시 중... (Ctrl+C로 종료)
+  Watching... (Ctrl+C to exit)
   ────────────────────────────────────────────────────────
 
   [14:32:15] Opus  📥 15.2K 📤 1.2K
-  🔥 +$0.38  →  누적: $8.73  🍗 0.5잔
-     "이 돈이면 치킨 반 마리는 됐는데..."
+  🔥 +$0.38  →  Total: $8.73  🍗 0.5
+     "Could've gone to a fancy buffet with this money..."
 
   [14:35:22] Sonnet  📥 8.3K 📤 2.1K
-  💸 +$0.06  →  누적: $8.79  🍗 0.5잔
-     "지갑에서 바람이 불기 시작합니다..."
+  💸 +$0.06  →  Total: $8.79  🍗 0.5
+     "Your wallet is literally crying"
 ```
 
-## 비용 구간별 감정 이펙트
+## Emotional Cost Tiers
 
-| 비용 구간 | 이모지 | 기분 | 메시지 예시 |
-|-----------|-------|------|------------|
-| $0 ~ $1 | 🪙 | 평화 | "아직은 괜찮아... 커피 한 모금 값이야." |
-| $1 ~ $5 | 💸 | 불안 | "아이스 아메리카노 한 잔이 증발했습니다." |
-| $5 ~ $10 | 🔥 | 걱정 | "오늘 점심값이 날아갔습니다." |
-| $10 ~ $30 | 🚨 | 경고 | "당신의 치킨이 울고 있습니다." |
-| $30 ~ $100 | 💀 | 공포 | "이번 달 넷플릭스를 해지해야 할 수도 있습니다." |
-| $100+ | ⚰️ | 장례식 | "여기 개발자의 지갑이 잠들다. (2024-2026)" |
+| Cost Range | Emoji | Mood | Example Message |
+|-----------|-------|------|-----------------|
+| $0 – $1 | 🪙 | Peace | "No worries, this is practically free" |
+| $1 – $5 | 💸 | Uneasy | "Starting to cost as much as vending machine coffee..." |
+| $5 – $10 | 🔥 | Worry | "Is this really okay...?" |
+| $10 – $30 | 🚨 | Alert | "Am I paying Claude a salary...?" |
+| $30 – $100 | 💀 | Danger | "The bank account is screaming" |
+| $100+ | ⚰️ | Funeral | "🚨 WARNING: This API key is on fire 🚨" |
 
-## 설치
+## Installation
 
 ```bash
 npm install -g claude-cost-cry
 ```
 
-## 사용법
+## Usage
 
-### CLI 모드 (터미널)
-
-```bash
-claude-cost-cry
-```
-
-실행하면:
-1. 오늘의 누적 비용을 스캔하여 보여줍니다
-2. Claude Code 사용을 실시간으로 감시합니다
-3. API 호출이 감지될 때마다 비용과 감정 메시지를 표시합니다
-4. `Ctrl+C`로 종료하면 세션 요약을 보여줍니다
-
-### 오버레이 모드 (화면 위 플로팅 위젯)
+### Overlay Mode (Floating Widget) — Default
 
 ```bash
-claude-cost-cry --overlay
+cost-cry
 ```
 
-화면 오른쪽 위에 떠 있는 위젯으로 실시간 비용을 확인합니다.
-- 비용 구간에 따라 이모지와 글자 색상이 변합니다
-- 새 API 호출 시 바운스 애니메이션 + 비용 플래시
-- $30 이상이면 위젯이 흔들립니다
-- 시스템 트레이에서 위젯 열기/닫기 가능
-- 드래그로 위치 이동 가능
+Launches a floating desktop widget (top-right corner) that tracks costs in real time:
+- Emoji and color change based on cost tier
+- Bounce animation + cost flash on new API calls
+- Widget shakes when cost exceeds $30
+- Toggle from system tray
+- Drag to reposition
+- Expandable panels: daily chart, model breakdown, top 3 expensive requests, settings
 
-> macOS에서 처음 실행 시 `xattr -cr node_modules/electron/dist/Electron.app` 실행이 필요할 수 있습니다.
+> On macOS, you may need to run `xattr -cr node_modules/electron/dist/Electron.app` on first launch.
 
-### 예산 설정
+### CLI Mode (Terminal)
 
 ```bash
-# 일일 예산 $10 설정
-claude-cost-cry config --daily-budget 10
-
-# 현재 설정 보기
-claude-cost-cry config
-
-# 예산 해제
-claude-cost-cry config --daily-budget off
-
-# 절약 넛지 끄기
-claude-cost-cry config --nudge off
+cost-cry cli
 ```
 
-예산을 설정하면:
-- CLI에 프로그레스 바로 예산 사용률 표시
-- 70% 도달 시 💡 경고, 90% 시 ⚠️ 경고, 100% 초과 시 🚫 경고
-- 오버레이 위젯에도 예산 바가 표시됩니다
+Real-time tracking in your terminal:
+1. Scans today's accumulated cost
+2. Watches for new Claude Code API calls in real time
+3. Displays cost + emotional message on each call
+4. Shows session summary on `Ctrl+C` exit
 
-### 절약 넛지
+### Reports
 
-API 호출 시 더 저렴한 모델을 썼으면 얼마를 아낄 수 있었는지 실시간으로 보여줍니다.
+```bash
+cost-cry report            # Weekly report
+cost-cry report --monthly  # Monthly report
+```
+
+ASCII bar charts with per-day costs, model breakdown, and savings simulation.
+
+### Configuration
+
+```bash
+cost-cry config                     # View current settings
+cost-cry config --daily-budget 10   # Set daily budget ($10)
+cost-cry config --daily-budget off  # Remove budget
+cost-cry config --currency KRW      # Switch display currency
+cost-cry config --nudge off         # Disable savings nudge
+cost-cry config --language ko       # Switch to Korean
+cost-cry config --add-source cursor # Track Cursor IDE usage
+```
+
+#### Budget Alerts
+
+When a budget is set:
+- 70% → 💡 warning, 90% → ⚠️ warning, 100% → 🚫 exceeded
+- Displayed in both CLI and overlay widget
+
+#### Savings Nudge
+
+Shows how much you could save using a cheaper model — in real time:
 
 ```
   [14:32:15] Opus  📥 15.2K 📤 1.2K
-  🔥 +$0.38  →  누적: $8.73  🍗 0.5잔
-     "이 돈이면 치킨 반 마리는 됐는데..."
-     💡 Haiku로 했으면 $0.02 ($0.36 절약)
+  🔥 +$0.38  →  Total: $8.73
+     💡 Would be $0.02 with Haiku (save $0.36)
 ```
 
-종료 시 총 절약 가능 금액도 요약해 줍니다.
+#### Multi-Provider Support
 
-## 작동 원리
+Track costs across multiple LLM providers:
+- 🟣 **Claude Code** — automatic (local JSONL logs)
+- ⚡ **Cursor IDE** — API polling (`cost-cry config --add-source cursor`)
+- 🟢 **OpenAI** — local logs (`cost-cry config --add-source openai:/path/to/logs`)
+- 🔵 **Google Gemini** — local logs (`cost-cry config --add-source google:/path/to/logs`)
 
-Claude Code는 모든 API 호출 로그를 `~/.claude/projects/` 아래에 JSONL 파일로 저장합니다. claude-cost-cry는 이 로그 파일을 실시간으로 감시하며:
+#### Language
 
-1. 새로운 assistant 응답의 `usage` 필드에서 토큰 사용량을 추출
-2. 모델별 공식 가격표를 기반으로 비용을 계산
-3. 비용 구간에 맞는 감정 메시지를 표시
+Default language is **English**. Switch to Korean:
 
-**프록시나 API 키가 필요 없습니다.** 로컬 로그 파일만 읽습니다.
+```bash
+cost-cry config --language ko
+```
 
-## 지원 모델 & 가격
+Also available in the overlay settings panel.
 
-| 모델 | 입력 ($/1M) | 출력 ($/1M) |
-|------|-----------|-----------|
+## How It Works
+
+Claude Code saves all API call logs as JSONL files under `~/.claude/projects/`. cost-cry watches these files in real time:
+
+1. Extracts token usage from the `usage` field of assistant responses
+2. Calculates cost based on official model pricing
+3. Displays emotional messages based on cost tier
+
+**No proxy or API key required.** Only reads local log files (or polls Cursor's internal API).
+
+## Supported Models & Pricing
+
+| Model | Input ($/1M) | Output ($/1M) |
+|-------|-------------|---------------|
 | Claude Opus | $15.00 | $75.00 |
 | Claude Sonnet | $3.00 | $15.00 |
 | Claude Haiku | $0.80 | $4.00 |
+| GPT-4o | $2.50 | $10.00 |
+| GPT-4o mini | $0.15 | $0.60 |
+| Gemini 2.5 Pro | $1.25 | $10.00 |
+| Gemini Flash | $0.075 | $0.30 |
 
-캐시 토큰도 자동 반영됩니다 (쓰기: 1.25x, 읽기: 0.1x).
+Cache tokens are automatically reflected (write: 1.25x, read: 0.1x).
 
-## 요구 사항
+## Requirements
 
 - Node.js >= 18
-- Claude Code가 설치되어 있어야 합니다 (`~/.claude/` 디렉토리)
+- Claude Code installed (`~/.claude/` directory) or another supported provider
 
-## 로드맵
+## Disclaimer
 
-- [x] v0.1 — Claude Code JSONL 로그 파싱 + 실시간 비용 추적 + 화면 오버레이 위젯
-- [x] v0.2 — 예산 한도 설정/경고 + 모델별 절약 넛지 + config 커맨드
-- [ ] v0.3 — 효과음, 터미널 애니메이션, 다국어/다통화 지원
-- [ ] v0.3 — 일일 리포트, SNS 공유용 이미지 내보내기
-- [ ] v1.0 — 멀티 프로바이더 지원, 커뮤니티 메시지 팩
+Cost calculations are **estimates for reference**. For exact billing, check the [Anthropic Dashboard](https://console.anthropic.com/).
 
-## 면책 조항
-
-이 도구의 비용 계산은 **참고용**입니다. 정확한 과금 금액은 [Anthropic 대시보드](https://console.anthropic.com/)에서 확인하세요.
-
-## 라이선스
+## License
 
 MIT
+
+---
+
+## 🇰🇷 한국어
+
+> 당신의 API 비용을 감정적으로 체감시켜주는 도구
+
+숫자로 보면 무감각한 API 비용을, **아이스 아메리카노와 치킨으로 환산하면 아프다.**
+
+### 설치
+
+```bash
+npm install -g claude-cost-cry
+```
+
+### 사용법
+
+```bash
+cost-cry                    # 오버레이 위젯 실행 (기본)
+cost-cry cli                # CLI 모드 (터미널 실시간 추적)
+cost-cry report             # 주간 리포트
+cost-cry report --monthly   # 월간 리포트
+cost-cry config             # 설정 보기
+```
+
+### 설정
+
+```bash
+cost-cry config --daily-budget 10     # 일일 예산 $10 설정
+cost-cry config --currency KRW        # 표시 통화 변경
+cost-cry config --language ko         # 한국어로 전환
+cost-cry config --add-source cursor   # Cursor IDE 추적
+cost-cry config --nudge off           # 절약 넛지 끄기
+```
+
+### 비용 구간별 감정 이펙트
+
+| 비용 구간 | 이모지 | 기분 | 메시지 예시 |
+|-----------|-------|------|------------|
+| $0 ~ $1 | 🪙 | 평화 | "아직 괜찮아요, 이 정도는 공기값이죠" |
+| $1 ~ $5 | 💸 | 불안 | "슬슬 자판기 커피값이 되어가네요..." |
+| $5 ~ $10 | 🔥 | 걱정 | "이거 진짜 괜찮은 건가요...?" |
+| $10 ~ $30 | 🚨 | 경고 | "클로드한테 월급을 주는 건가..." |
+| $30 ~ $100 | 💀 | 공포 | "은행 잔고가 비명을 지르고 있습니다" |
+| $100+ | ⚰️ | 장례식 | "🚨 경고: 이 API 키는 불에 타고 있습니다 🚨" |
+
+### 지원 프로바이더
+
+- 🟣 **Claude Code** — 자동 (로컬 JSONL 로그)
+- ⚡ **Cursor IDE** — API 폴링
+- 🟢 **OpenAI** — 로컬 로그
+- 🔵 **Google Gemini** — 로컬 로그
+
+### 면책 조항
+
+이 도구의 비용 계산은 **참고용**입니다. 정확한 과금 금액은 [Anthropic 대시보드](https://console.anthropic.com/)에서 확인하세요.
