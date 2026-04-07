@@ -1,0 +1,35 @@
+{
+  "name": "claude-cost-cry",
+  "version": "0.1.0",
+  "description": "당신의 Claude API 비용을 감정적으로 체감시켜주는 도구",
+  "type": "module",
+  "bin": {
+    "claude-cost-cry": "./bin/cli.js"
+  },
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node bin/cli.js",
+    "overlay": "electron electron/",
+    "dev": "node --watch bin/cli.js"
+  },
+  "keywords": [
+    "claude",
+    "api",
+    "cost",
+    "tracker",
+    "cli",
+    "anthropic",
+    "token",
+    "usage"
+  ],
+  "author": "",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "chalk": "^5.4.1",
+    "chokidar": "^4.0.3",
+    "electron": "^33.4.11"
+  }
+}

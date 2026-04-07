@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    overflow: hidden;
+    background: transparent;
+    width: 100%;
+    height: 100%;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    user-select: none;
+    -webkit-app-region: drag;
+  }
+
+  .widget {
+    width: 260px;
+    height: 100px;
+    margin: 10px;
+    background: rgba(20, 20, 28, 0.88);
+    border-radius: 18px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    gap: 14px;
+    transition: background 0.3s ease, border-color 0.3s ease;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .widget::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 18px;
+    opacity: 0;
+    transition: opacity 0.4s ease;
+    pointer-events: none;
+  }
+
+  .widget.pulse::before {
+    animation: pulse-glow 0.6s ease-out;
+  }
+
+  @keyframes pulse-glow {
+    0% { opacity: 1; box-shadow: inset 0 0 20px rgba(255, 180, 50, 0.3); }
+    100% { opacity: 0; }
+  }
+
+  /* Tier-based border glow */
+  .widget.tier-peace { border-color: rgba(100, 200, 100, 0.2); }
+  .widget.tier-uneasy { border-color: rgba(255, 200, 50, 0.25); }
+  .widget.tier-worry { border-color: rgba(255, 140, 30, 0.3); }
+  .widget.tier-alert { border-color: rgba(255, 60, 60, 0.35); }
+  .widget.tier-danger { border-color: rgba(200, 30, 30, 0.4); }
+  .widget.tier-funeral { border-color: rgba(120, 50, 180, 0.4); }
+
+  .emoji-container {
+    flex-shrink: 0;
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 30px;
+    transition: transform 0.3s ease;
+  }
+
+  .emoji-container.bounce {
+    animation: emoji-bounce 0.5s ease;
+  }
+
+  @keyframes emoji-bounce {
+    0% { transform: scale(1); }
+    30% { transform: scale(1.4); }
+    50% { transform: scale(0.9); }
+    70% { transform: scale(1.1); }
+    100% { transform: scale(1); }
+  }
+
+  .info {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .cost-line {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+  }
+
+  .cost {
+    font-size: 26px;
+    font-weight: 700;
+    color: #fff;
+    letter-spacing: -0.5px;
+    transition: color 0.3s ease;
+  }
+
+  .delta {
+    font-size: 12px;
+    font-weight: 500;
+    color: rgba(255, 120, 80, 0.9);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+
+  .delta.show {
+    animation: delta-flash 2s ease-out forwards;
+  }
+
+  @keyframes delta-flash {
+    0% { opacity: 1; transform: translateY(0); }
+    70% { opacity: 0.8; }
+    100% { opacity: 0; transform: translateY(-4px); }
+  }
+
+  .equiv {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.5);
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .calls {
+    font-size: 10px;
+    color: rgba(255, 255, 255, 0.3);
+    margin-top: 1px;
+  }
+
+  /* Tier colors for cost text */
+  .tier-peace .cost { color: #8be88b; }
+  .tier-uneasy .cost { color: #ffd966; }
+  .tier-worry .cost { color: #ff9944; }
+  .tier-alert .cost { color: #ff5555; }
+  .tier-danger .cost { color: #ff2222; }
+  .tier-funeral .cost { color: #bb66ff; }
+
+  /* Shake animation for high tiers */
+  .widget.shake {
+    animation: widget-shake 0.4s ease;
+  }
+
+  @keyframes widget-shake {
+    0%, 100% { transform: translateX(0); }
+    20% { transform: translateX(-3px); }
+    40% { transform: translateX(3px); }
+    60% { transform: translateX(-2px); }
+    80% { transform: translateX(2px); }
+  }
+</style>
+</head>
+<body>
+
+<div class="widget tier-peace" id="widget">
+  <div class="emoji-container" id="emoji">🪙</div>
+  <div class="info">
+    <div class="cost-line">
+      <span class="cost" id="cost">$0.00</span>
+      <span class="delta" id="delta"></span>
+    </div>
+    <div class="equiv" id="equiv">지갑이 평화롭습니다</div>
+    <div class="calls" id="calls"></div>
+  </div>
+</div>
+
+<script>
+  const widget = document.getElementById('widget');
+  const emojiEl = document.getElementById('emoji');
+  const costEl = document.getElementById('cost');
+  const deltaEl = document.getElementById('delta');
+  const equivEl = document.getElementById('equiv');
+  const callsEl = document.getElementById('calls');
+
+  function formatCost(cost) {
+    if (cost < 0.01) return `$${cost.toFixed(4)}`;
+    if (cost < 1) return `$${cost.toFixed(3)}`;
+    return `$${cost.toFixed(2)}`;
+  }
+
+  function updateDisplay(data) {
+    // Update tier class
+    widget.className = 'widget';
+    if (data.tier) {
+      widget.classList.add(`tier-${data.tier.level}`);
+    }
+
+    // Update emoji
+    if (data.tier) {
+      emojiEl.textContent = data.tier.emoji;
+    }
+
+    // Update cost
+    costEl.textContent = formatCost(data.totalCost);
+
+    // Update equivalent
+    if (data.equivalent) {
+      equivEl.textContent = `${data.equivalent.emoji} ${data.equivalent.name} ${data.equivalent.count}잔`;
+    } else if (data.totalCost === 0) {
+      equivEl.textContent = '지갑이 평화롭습니다';
+    } else {
+      equivEl.textContent = '아직은 괜찮아...';
+    }
+
+    // Update call count
+    if (data.callCount > 0) {
+      callsEl.textContent = `오늘 ${data.callCount}건`;
+    }
+  }
+
+  function animateUpdate(data) {
+    // Emoji bounce
+    emojiEl.classList.remove('bounce');
+    void emojiEl.offsetWidth;
+    emojiEl.classList.add('bounce');
+
+    // Widget pulse
+    widget.classList.remove('pulse');
+    void widget.offsetWidth;
+    widget.classList.add('pulse');
+
+    // Shake for high cost updates
+    if (data.tier && ['alert', 'danger', 'funeral'].includes(data.tier.level)) {
+      widget.classList.remove('shake');
+      void widget.offsetWidth;
+      widget.classList.add('shake');
+    }
+
+    // Delta flash
+    if (data.deltaCost) {
+      deltaEl.textContent = `+${formatCost(data.deltaCost)}`;
+      deltaEl.classList.remove('show');
+      void deltaEl.offsetWidth;
+      deltaEl.classList.add('show');
+    }
+  }
+
+  // IPC handlers
+  window.bridge.onInitialData((data) => {
+    updateDisplay(data);
+  });
+
+  window.bridge.onCostUpdate((data) => {
+    updateDisplay(data);
+    animateUpdate(data);
+  });
+</script>
+
+</body>
+</html>
