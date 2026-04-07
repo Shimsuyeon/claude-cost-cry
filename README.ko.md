@@ -155,6 +155,12 @@ Claude Code는 API 호출 로그를 `~/.claude/projects/` 아래에 JSONL 파일
 
 이 도구의 비용 계산은 **참고용**입니다. 정확한 과금 금액은 [Anthropic 대시보드](https://console.anthropic.com/)에서 확인하세요.
 
+## 후원
+
+이 도구가 심장마비를 막아줬다면, 커피 한 잔 사주세요:
+
+[![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-ffdd00?style=flat&logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/shimsuyeon)
+
 ## 라이선스
 
 MIT

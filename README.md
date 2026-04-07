@@ -155,6 +155,12 @@ Cache tokens are automatically reflected (write: 1.25x, read: 0.1x).
 
 Cost calculations are **estimates for reference**. For exact billing, check the [Anthropic Dashboard](https://console.anthropic.com/).
 
+## Support
+
+If this tool saved you from a heart attack, consider buying me a coffee:
+
+[![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-ffdd00?style=flat&logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/shimsuyeon)
+
 ## License
 
 MIT
