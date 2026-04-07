@@ -1,6 +1,9 @@
 # 🪙 claude-cost-cry
 
-> 당신의 API 비용을 감정적으로 체감시켜주는 도구
+[![npm version](https://img.shields.io/npm/v/claude-cost-cry.svg)](https://www.npmjs.com/package/claude-cost-cry)
+[![license](https://img.shields.io/npm/l/claude-cost-cry.svg)](LICENSE)
+
+> AI 비용으로 얇아지는 내 지갑을 실시간으로 살펴보세요 (ㅠㅠ)
 
 숫자로 보면 무감각한 API 비용을, **아이스 아메리카노와 치킨으로 환산하면 아프다.**
 
@@ -49,6 +52,8 @@ $ cost-cry
 ```bash
 npm install -g claude-cost-cry
 ```
+
+> **[npm 패키지](https://www.npmjs.com/package/claude-cost-cry)** · Node.js 18 이상 필요
 
 ## 사용법
 

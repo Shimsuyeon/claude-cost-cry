@@ -1,8 +1,10 @@
 # 🪙 claude-cost-cry
 
-> Emotionally experience your API costs
+[![npm version](https://img.shields.io/npm/v/claude-cost-cry.svg)](https://www.npmjs.com/package/claude-cost-cry)
+[![license](https://img.shields.io/npm/l/claude-cost-cry.svg)](LICENSE)
 
-Numbers feel numb. But **when your API bill becomes iced americanos and fried chicken, it hurts.**
+> Your wallet cries every time you call Claude. Watch it happen in real-time.
+> AI 비용으로 얇아지는 내 지갑을 실시간으로 살펴보세요 (ㅠㅠ)
 
 [한국어](README.ko.md)
 
@@ -49,6 +51,8 @@ $ cost-cry
 ```bash
 npm install -g claude-cost-cry
 ```
+
+> **[npm package](https://www.npmjs.com/package/claude-cost-cry)** · Requires Node.js >= 18
 
 ## Usage
 
