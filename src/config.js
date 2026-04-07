@@ -9,7 +9,10 @@ const DEFAULTS = {
   dailyBudget: null,   // USD, null = 제한 없음
   monthlyBudget: null,
   currency: 'USD',
-  showNudge: true,      // 모델 절약 넛지 표시 여부
+  exchangeRate: null,  // null = API 자동, 숫자 = 수동 고정
+  showNudge: true,
+  equivalentUnit: 'auto',
+  customEquivalents: [],
 };
 
 export function loadConfig() {

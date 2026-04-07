@@ -29,25 +29,44 @@ export function formatCostShort(cost) {
 }
 
 /**
- * 비용을 가장 적절한 일상 소비 아이템으로 환산한다.
- * 0.3잔 이상일 때 해당 아이템을 사용한다.
+ * 전체 환산 아이템 목록을 반환한다 (빌트인 + 커스텀).
  */
-export function toEquivalent(cost) {
+export function getAllEquivalents(config) {
+  const custom = config?.customEquivalents || [];
+  return [...custom, ...EQUIVALENTS];
+}
+
+/**
+ * 비용을 일상 소비 아이템으로 환산한다.
+ * config.equivalentUnit이 'auto'면 금액에 맞는 걸 자동 선택,
+ * 특정 이름이면 해당 아이템으로 고정.
+ */
+export function toEquivalent(cost, config) {
   if (cost < 0.01) return null;
 
-  for (const item of EQUIVALENTS) {
-    const count = cost / item.price;
-    if (count >= 0.1) {
+  const allItems = getAllEquivalents(config);
+  const unit = config?.equivalentUnit || 'auto';
+
+  if (unit !== 'auto') {
+    const fixed = allItems.find(i => i.name === unit);
+    if (fixed) {
       return {
-        ...item,
-        count: Math.round(count * 10) / 10,
+        ...fixed,
+        count: Math.round((cost / fixed.price) * 10) / 10,
       };
     }
   }
 
+  for (const item of allItems) {
+    const count = cost / item.price;
+    if (count >= 0.1) {
+      return { ...item, count: Math.round(count * 10) / 10 };
+    }
+  }
+
   return {
-    ...EQUIVALENTS[0],
-    count: Math.round((cost / EQUIVALENTS[0].price) * 10) / 10,
+    ...allItems[0],
+    count: Math.round((cost / allItems[0].price) * 10) / 10,
   };
 }
 

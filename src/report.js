@@ -1,6 +1,7 @@
 import chalk from 'chalk';
 import { formatCostShort, toEquivalent } from './calculator.js';
 import { aggregateByDate, computeStats } from './history.js';
+import { loadConfig } from './config.js';
 
 const BAR_MAX_WIDTH = 30;
 
@@ -86,8 +87,9 @@ export async function showMonthlyReport() {
 }
 
 function printStats(stats) {
-  const equiv = toEquivalent(stats.totalCost);
-  const equivStr = equiv ? ` (${equiv.emoji} ${equiv.name} ${equiv.count}잔)` : '';
+  const config = loadConfig();
+  const equiv = toEquivalent(stats.totalCost, config);
+  const equivStr = equiv ? ` (${equiv.emoji} ${equiv.name} ${equiv.count}${equiv.unit || '개'})` : '';
 
   console.log();
   console.log(`  💰 총 비용:     ${chalk.bold.yellow(formatCostShort(stats.totalCost))}${chalk.gray(equivStr)}`);

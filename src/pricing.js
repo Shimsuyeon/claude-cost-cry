@@ -46,9 +46,9 @@ export function getModelLabel(modelName) {
 
 // 체감 환산 아이템 (USD 기준)
 export const EQUIVALENTS = [
-  { name: '아이스 아메리카노', price: 4.5, emoji: '☕' },
-  { name: '점심 한 끼', price: 8, emoji: '🍱' },
-  { name: '치킨', price: 17, emoji: '🍗' },
-  { name: '넷플릭스 한 달', price: 13, emoji: '📺' },
-  { name: '스타벅스 프라푸치노', price: 6, emoji: '🥤' },
+  { name: '아이스 아메리카노', price: 4.5, emoji: '☕', unit: '잔' },
+  { name: '점심 한 끼', price: 8, emoji: '🍱', unit: '끼' },
+  { name: '치킨', price: 17, emoji: '🍗', unit: '마리' },
+  { name: '넷플릭스 한 달', price: 13, emoji: '📺', unit: '개월' },
+  { name: '스타벅스 프라푸치노', price: 6, emoji: '🥤', unit: '잔' },
 ];

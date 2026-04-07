@@ -11,10 +11,11 @@ let totalCost = 0;
 let callCount = 0;
 let config = {};
 let topRequests = [];
+let exchangeInfo = null;
 
 const WIDGET_WIDTH = 280;
 const WIDGET_HEIGHT = 140;
-const WIDGET_HEIGHT_EXPANDED = 310;
+const WIDGET_HEIGHT_EXPANDED = 420;
 const MARGIN = 20;
 
 function createOverlay() {
@@ -93,6 +94,7 @@ function buildPayload(deltaCost, usage) {
     budget: budgetStatus,
     nudge: usage ? getNudgeInfo(usage, deltaCost) : null,
     topRequests,
+    exchange: exchangeInfo,
   };
 }
 
@@ -156,18 +158,31 @@ function getTier(cost) {
 
 function getEquivalent(cost) {
   if (cost < 0.01) return null;
-  const items = [
-    { name: '아이스 아메리카노', price: 4.5, emoji: '☕' },
-    { name: '점심', price: 8, emoji: '🍱' },
-    { name: '치킨', price: 17, emoji: '🍗' },
+
+  const defaultItems = [
+    { name: '아이스 아메리카노', price: 4.5, emoji: '☕', unit: '잔' },
+    { name: '점심', price: 8, emoji: '🍱', unit: '끼' },
+    { name: '치킨', price: 17, emoji: '🍗', unit: '마리' },
   ];
-  for (const item of items) {
+
+  const custom = config.customEquivalents || [];
+  const allItems = [...custom, ...defaultItems];
+  const unit = config.equivalentUnit || 'auto';
+
+  if (unit !== 'auto') {
+    const fixed = allItems.find(i => i.name === unit);
+    if (fixed) {
+      return { ...fixed, count: Math.round((cost / fixed.price) * 10) / 10 };
+    }
+  }
+
+  for (const item of allItems) {
     const count = cost / item.price;
     if (count >= 0.1) {
       return { ...item, count: Math.round(count * 10) / 10 };
     }
   }
-  return { ...items[0], count: Math.round((cost / items[0].price) * 10) / 10 };
+  return { ...allItems[0], count: Math.round((cost / allItems[0].price) * 10) / 10 };
 }
 
 function getBudgetStatus(cost, budget) {
@@ -185,11 +200,21 @@ function sendCostUpdate(usage, cost) {
   overlay.webContents.send('cost-update', buildPayload(cost, usage));
 }
 
+function formatCostForTray(cost) {
+  if (!exchangeInfo || exchangeInfo.currency === 'USD') {
+    return cost < 1 ? `$${cost.toFixed(3)}` : `$${cost.toFixed(2)}`;
+  }
+  const local = cost * exchangeInfo.rate;
+  const sym = exchangeInfo.symbol;
+  if (exchangeInfo.currency === 'KRW' || exchangeInfo.currency === 'JPY') {
+    return `${sym}${Math.round(local).toLocaleString()}`;
+  }
+  return `${sym}${local.toFixed(2)}`;
+}
+
 function updateTrayTitle() {
   if (!tray) return;
-  const costStr = totalCost < 1
-    ? `$${totalCost.toFixed(3)}`
-    : `$${totalCost.toFixed(2)}`;
+  const costStr = formatCostForTray(totalCost);
   tray.setTitle(` ${costStr}`);
   tray.setToolTip(`claude-cost-cry: 오늘 ${costStr} (${callCount}건)`);
 }
@@ -198,8 +223,10 @@ async function startCostTracking() {
   const { scanToday, startWatching } = await import('../src/watcher.js');
   const { calculateCost } = await import('../src/calculator.js');
   const { loadConfig } = await import('../src/config.js');
+  const { getExchangeRate } = await import('../src/exchange.js');
 
   config = loadConfig();
+  exchangeInfo = await getExchangeRate(config);
 
   const { usages: todayUsages, fileOffsets } = await scanToday();
 
@@ -250,12 +277,27 @@ app.whenReady().then(async () => {
 
   ipcMain.handle('get-config', async () => {
     const { loadConfig } = await import('../src/config.js');
-    return loadConfig();
+    const { getAllEquivalents } = await import('../src/calculator.js');
+    const { SUPPORTED_CURRENCIES } = await import('../src/exchange.js');
+    const cfg = loadConfig();
+    return {
+      ...cfg,
+      allUnits: getAllEquivalents(cfg).map(e => ({ name: e.name, emoji: e.emoji })),
+      supportedCurrencies: SUPPORTED_CURRENCIES,
+      currentExchange: exchangeInfo,
+    };
   });
 
   ipcMain.handle('save-config', async (_e, updates) => {
-    const { updateConfig } = await import('../src/config.js');
+    const { updateConfig, loadConfig } = await import('../src/config.js');
+    const { getExchangeRate } = await import('../src/exchange.js');
     config = updateConfig(updates);
+
+    if (updates.currency !== undefined || updates.exchangeRate !== undefined) {
+      exchangeInfo = await getExchangeRate(config);
+      updateTrayTitle();
+    }
+
     if (overlay && overlay.webContents) {
       overlay.webContents.send('cost-update', buildPayload());
     }

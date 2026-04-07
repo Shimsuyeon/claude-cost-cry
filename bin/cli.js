@@ -9,20 +9,43 @@ if (command === 'config') {
 
   const flags = args.slice(1);
 
+  const { getAllEquivalents } = await import('../src/calculator.js');
+
   if (flags.length === 0) {
     const config = loadConfig();
+    const { getExchangeRate, SUPPORTED_CURRENCIES } = await import('../src/exchange.js');
+    const allItems = getAllEquivalents(config);
+    const unitDisplay = config.equivalentUnit === 'auto'
+      ? '자동'
+      : `${config.equivalentUnit}`;
+    const exchange = await getExchangeRate(config);
     console.log();
     showInfo('현재 설정:');
     console.log(`  일일 예산:    ${config.dailyBudget ? `$${config.dailyBudget}` : '제한 없음'}`);
     console.log(`  월간 예산:    ${config.monthlyBudget ? `$${config.monthlyBudget}` : '제한 없음'}`);
+    console.log(`  통화:         ${config.currency || 'USD'}`);
+    if (exchange && exchange.currency !== 'USD') {
+      const srcLabel = { api: '실시간', cache: '캐시', 'stale-cache': '오래된 캐시', manual: '수동', base: '' };
+      console.log(`  💱 환율:      1 USD = ${exchange.rate.toLocaleString()} ${exchange.currency} (${srcLabel[exchange.source] || ''} ${exchange.updatedAt || ''})`);
+    }
+    if (config.exchangeRate) {
+      console.log(`  환율 고정:    ${config.exchangeRate}`);
+    }
     console.log(`  절약 넛지:    ${config.showNudge ? '켜짐' : '꺼짐'}`);
+    console.log(`  환산 단위:    ${unitDisplay}`);
+    if (config.customEquivalents?.length > 0) {
+      console.log(`  커스텀 단위:  ${config.customEquivalents.map(e => `${e.emoji} ${e.name}`).join(', ')}`);
+    }
+    console.log();
+    console.log(`  사용 가능한 단위: ${allItems.map(e => e.name).join(', ')}`);
+    console.log(`  지원 통화: ${SUPPORTED_CURRENCIES.join(', ')}`);
     console.log();
     showInfo('설정 변경: claude-cost-cry config --daily-budget 10');
     console.log();
     process.exit(0);
   }
 
-  for (let i = 0; i < flags.length; i += 2) {
+  for (let i = 0; i < flags.length; ) {
     const key = flags[i];
     const value = flags[i + 1];
 
@@ -31,16 +54,75 @@ if (command === 'config') {
       case '-d':
         updateConfig({ dailyBudget: value === 'off' ? null : parseFloat(value) });
         showConfigUpdate('일일 예산', value === 'off' ? '제한 없음' : `$${value}`);
+        i += 2;
         break;
       case '--monthly-budget':
-      case '-m':
         updateConfig({ monthlyBudget: value === 'off' ? null : parseFloat(value) });
         showConfigUpdate('월간 예산', value === 'off' ? '제한 없음' : `$${value}`);
+        i += 2;
         break;
       case '--nudge':
         updateConfig({ showNudge: value !== 'off' });
         showConfigUpdate('절약 넛지', value === 'off' ? '꺼짐' : '켜짐');
+        i += 2;
         break;
+      case '--unit':
+        updateConfig({ equivalentUnit: value === 'auto' ? 'auto' : value });
+        showConfigUpdate('환산 단위', value === 'auto' ? '자동' : value);
+        i += 2;
+        break;
+      case '--add-unit': {
+        // format: "이름:가격:이모지" 또는 "이름:가격:이모지:단위"
+        const parts = value.split(':');
+        if ((parts.length !== 3 && parts.length !== 4) || isNaN(parseFloat(parts[1]))) {
+          console.error('  ❌ 형식: --add-unit "이름:가격:이모지:단위"  예: "떡볶이:3.5:🍜:그릇"');
+          process.exit(1);
+        }
+        const newItem = { name: parts[0], price: parseFloat(parts[1]), emoji: parts[2], unit: parts[3] || '개' };
+        const cfg = loadConfig();
+        const customs = (cfg.customEquivalents || []).filter(e => e.name !== newItem.name);
+        customs.push(newItem);
+        updateConfig({ customEquivalents: customs });
+        showConfigUpdate('커스텀 단위 추가', `${newItem.emoji} ${newItem.name} ($${newItem.price})`);
+        i += 2;
+        break;
+      }
+      case '--remove-unit': {
+        const cfg2 = loadConfig();
+        const filtered = (cfg2.customEquivalents || []).filter(e => e.name !== value);
+        updateConfig({ customEquivalents: filtered });
+        showConfigUpdate('커스텀 단위 삭제', value);
+        i += 2;
+        break;
+      }
+      case '--currency': {
+        const { SUPPORTED_CURRENCIES } = await import('../src/exchange.js');
+        const cur = value.toUpperCase();
+        if (!SUPPORTED_CURRENCIES.includes(cur)) {
+          console.error(`  ❌ 지원하지 않는 통화: ${cur}. 지원: ${SUPPORTED_CURRENCIES.join(', ')}`);
+          process.exit(1);
+        }
+        updateConfig({ currency: cur });
+        showConfigUpdate('통화', cur);
+        i += 2;
+        break;
+      }
+      case '--exchange-rate': {
+        if (value === 'auto') {
+          updateConfig({ exchangeRate: null });
+          showConfigUpdate('환율', '자동 (API)');
+        } else {
+          const rate = parseFloat(value);
+          if (isNaN(rate) || rate <= 0) {
+            console.error('  ❌ 유효한 환율을 입력하세요. 예: --exchange-rate 1350');
+            process.exit(1);
+          }
+          updateConfig({ exchangeRate: rate });
+          showConfigUpdate('환율 고정', `${rate}`);
+        }
+        i += 2;
+        break;
+      }
       default:
         console.error(`  ❌ 알 수 없는 옵션: ${key}`);
         process.exit(1);
@@ -98,14 +180,21 @@ if (command === 'config') {
     claude-cost-cry report --monthly    월간 리포트
 
   설정 옵션:
-    --daily-budget <금액>    일일 예산 설정 (USD). 해제: --daily-budget off
-    --monthly-budget <금액>  월간 예산 설정 (USD). 해제: --monthly-budget off
-    --nudge <on|off>         모델 절약 넛지 표시 여부
+    --daily-budget <금액>      일일 예산 설정 (USD). 해제: --daily-budget off
+    --monthly-budget <금액>    월간 예산 설정 (USD). 해제: --monthly-budget off
+    --nudge <on|off>           모델 절약 넛지 표시 여부
+    --unit <이름|auto>         환산 단위 고정 (예: 치킨). 자동: --unit auto
+    --add-unit "이름:가격:이모지:단위"  커스텀 환산 단위 추가
+    --remove-unit <이름>       커스텀 환산 단위 삭제
+    --currency <코드>          표시 통화 (USD, KRW, JPY, EUR, GBP, CNY)
+    --exchange-rate <숫자|auto> 환율 수동 고정. 자동: --exchange-rate auto
   
   예시:
     claude-cost-cry config --daily-budget 10
-    claude-cost-cry config --daily-budget off
-    claude-cost-cry config --nudge off
+    claude-cost-cry config --unit 치킨
+    claude-cost-cry config --add-unit "떡볶이:3.5:🍜:그릇"
+    claude-cost-cry config --currency KRW
+    claude-cost-cry config --exchange-rate 1350
   `);
 } else {
   const { main } = await import('../src/index.js');

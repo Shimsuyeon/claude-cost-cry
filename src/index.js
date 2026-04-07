@@ -4,6 +4,7 @@ import { loadConfig, getBudgetStatus } from './config.js';
 import { showBanner, showTodaySummary, showCostUpdate, showBudgetAlert, showShutdown, showError, showInfo } from './display.js';
 import { scanToday, startWatching, getClaudeProjectsDir } from './watcher.js';
 import { getModelLabel } from './pricing.js';
+import { getExchangeRate } from './exchange.js';
 
 function truncatePrompt(text, maxLen = 30) {
   if (!text) return null;
@@ -45,6 +46,8 @@ export async function main() {
 
   showInfo('오늘의 사용량을 스캔하는 중...');
 
+  const exchange = await getExchangeRate(config);
+
   const { usages: todayUsages, fileOffsets } = await scanToday();
 
   let totalCost = 0;
@@ -65,7 +68,7 @@ export async function main() {
   }
 
   const budgetStatus = getBudgetStatus(totalCost, config.dailyBudget);
-  showTodaySummary(totalCost, callCount, budgetStatus);
+  showTodaySummary(totalCost, callCount, budgetStatus, config, exchange);
 
   const sessionStartCost = totalCost;
   let lastBudgetStatus = budgetStatus.status;
@@ -80,13 +83,13 @@ export async function main() {
     const nudge = getSavingsNudge(usage, cost);
     if (nudge) totalPotentialSavings += nudge.saving;
 
-    showCostUpdate(usage, cost, totalCost, config);
+    showCostUpdate(usage, cost, totalCost, config, exchange);
 
     if (config.dailyBudget) {
       const newBudgetStatus = getBudgetStatus(totalCost, config.dailyBudget);
       if (newBudgetStatus.status !== lastBudgetStatus &&
           (newBudgetStatus.status === 'danger' || newBudgetStatus.status === 'exceeded')) {
-        showBudgetAlert(newBudgetStatus);
+        showBudgetAlert(newBudgetStatus, exchange);
       }
       lastBudgetStatus = newBudgetStatus.status;
     }
@@ -99,7 +102,7 @@ export async function main() {
 
   const shutdown = () => {
     const sessionCost = totalCost - sessionStartCost;
-    showShutdown(sessionCost, totalCost, totalPotentialSavings, topRequests);
+    showShutdown(sessionCost, totalCost, totalPotentialSavings, topRequests, config, exchange);
     watcher.close();
     process.exit(0);
   };

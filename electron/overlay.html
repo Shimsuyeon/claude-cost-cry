@@ -249,7 +249,7 @@
   }
 
   /* ── Settings panel ── */
-  .settings-panel.open { max-height: 200px; }
+  .settings-panel.open { max-height: 280px; }
 
   .setting-row {
     display: flex;
@@ -331,10 +331,54 @@
   .save-btn:hover { background: rgba(100, 200, 255, 0.25); }
   .save-btn:active { transform: scale(0.97); }
 
+  .setting-select {
+    width: 110px;
+    height: 26px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    color: #fff;
+    font-size: 11px;
+    padding: 0 6px;
+    outline: none;
+    font-family: inherit;
+    cursor: pointer;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+
+  .setting-select option {
+    background: #1a1a24;
+    color: #fff;
+  }
+
   .save-btn.saved {
     background: rgba(100, 200, 100, 0.2);
     border-color: rgba(100, 200, 100, 0.3);
     color: rgba(100, 200, 100, 0.9);
+  }
+
+  .exchange-info {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+    padding: 4px 8px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 6px;
+    font-size: 10px;
+    color: rgba(255, 255, 255, 0.35);
+  }
+
+  .exchange-rate-value {
+    color: rgba(100, 200, 255, 0.7);
+    font-weight: 600;
+    font-size: 10px;
+  }
+
+  .exchange-source {
+    font-size: 8px;
+    color: rgba(255, 255, 255, 0.2);
   }
 
   /* ── TOP 3 panel ── */
@@ -523,9 +567,28 @@
   <div class="panel settings-panel" id="settingsPanel">
     <div class="panel-divider"></div>
 
+    <div class="exchange-info" id="exchangeInfo" style="display:none">
+      <span>💱 <span id="exchangeRateDisplay"></span></span>
+      <span class="exchange-source" id="exchangeSource"></span>
+    </div>
+
     <div class="setting-row">
-      <span class="setting-label">일일 예산 ($)</span>
+      <span class="setting-label">통화</span>
+      <select class="setting-select" id="currencySelect" style="width:80px">
+        <option value="USD">$ USD</option>
+      </select>
+    </div>
+
+    <div class="setting-row">
+      <span class="setting-label">일일 예산</span>
       <input type="text" class="setting-input" id="budgetInput" placeholder="미설정">
+    </div>
+
+    <div class="setting-row">
+      <span class="setting-label">환산 단위</span>
+      <select class="setting-select" id="unitSelect">
+        <option value="auto">🔄 자동</option>
+      </select>
     </div>
 
     <div class="setting-row">
@@ -562,16 +625,35 @@
   const chartBody = document.getElementById('chartBody');
   const topList = document.getElementById('topList');
   const budgetInput = document.getElementById('budgetInput');
+  const unitSelect = document.getElementById('unitSelect');
+  const currencySelect = document.getElementById('currencySelect');
   const nudgeToggle = document.getElementById('nudgeToggle');
   const saveBtn = document.getElementById('saveBtn');
+  const exchangeInfoEl = document.getElementById('exchangeInfo');
+  const exchangeRateDisplay = document.getElementById('exchangeRateDisplay');
+  const exchangeSource = document.getElementById('exchangeSource');
 
-  let activePanel = null; // 'settings' | 'top' | null
+  let activePanel = null;
   let latestData = {};
+  let currentExchange = null;
 
-  function formatCost(cost) {
+  function formatCostUsd(cost) {
     if (cost < 0.01) return `$${cost.toFixed(4)}`;
     if (cost < 1) return `$${cost.toFixed(3)}`;
     return `$${cost.toFixed(2)}`;
+  }
+
+  function formatCost(cost) {
+    const ex = currentExchange;
+    if (!ex || ex.currency === 'USD') return formatCostUsd(cost);
+
+    const local = cost * ex.rate;
+    const sym = ex.symbol;
+
+    if (ex.currency === 'KRW' || ex.currency === 'JPY') {
+      return `${sym}${Math.round(local).toLocaleString()}`;
+    }
+    return `${sym}${local.toFixed(2)}`;
   }
 
   function escapeHtml(str) {
@@ -625,6 +707,38 @@
     const cfg = await window.bridge.getConfig();
     budgetInput.value = cfg.dailyBudget || '';
     nudgeToggle.checked = cfg.showNudge !== false;
+
+    unitSelect.innerHTML = '<option value="auto">🔄 자동</option>';
+    if (cfg.allUnits) {
+      for (const u of cfg.allUnits) {
+        const opt = document.createElement('option');
+        opt.value = u.name;
+        opt.textContent = `${u.emoji} ${u.name}`;
+        unitSelect.appendChild(opt);
+      }
+    }
+    unitSelect.value = cfg.equivalentUnit || 'auto';
+
+    const CURRENCY_LABELS = { USD: '$ USD', KRW: '₩ KRW', JPY: '¥ JPY', EUR: '€ EUR', GBP: '£ GBP', CNY: '¥ CNY' };
+    currencySelect.innerHTML = '';
+    const currencies = cfg.supportedCurrencies || ['USD'];
+    for (const c of currencies) {
+      const opt = document.createElement('option');
+      opt.value = c;
+      opt.textContent = CURRENCY_LABELS[c] || c;
+      currencySelect.appendChild(opt);
+    }
+    currencySelect.value = cfg.currency || 'USD';
+
+    if (cfg.currentExchange && cfg.currentExchange.currency !== 'USD') {
+      exchangeInfoEl.style.display = 'flex';
+      exchangeRateDisplay.textContent = `1 USD = ${cfg.currentExchange.rate.toLocaleString()} ${cfg.currentExchange.currency}`;
+      const srcMap = { api: '실시간', cache: '캐시', 'stale-cache': '오래된 캐시', manual: '수동 설정' };
+      exchangeSource.textContent = `${srcMap[cfg.currentExchange.source] || ''} ${cfg.currentExchange.updatedAt || ''}`.trim();
+    } else {
+      exchangeInfoEl.style.display = 'none';
+    }
+
     saveBtn.textContent = '저장';
     saveBtn.classList.remove('saved');
     openPanel('settings');
@@ -731,6 +845,8 @@
     const updates = {
       dailyBudget: budgetVal === '' ? null : parseFloat(budgetVal),
       showNudge: nudgeToggle.checked,
+      equivalentUnit: unitSelect.value,
+      currency: currencySelect.value,
     };
 
     if (updates.dailyBudget !== null && isNaN(updates.dailyBudget)) {
@@ -753,6 +869,7 @@
 
   function updateDisplay(data) {
     latestData = data;
+    if (data.exchange) currentExchange = data.exchange;
 
     widget.className = 'widget';
     if (data.tier) widget.classList.add(`tier-${data.tier.level}`);
@@ -765,7 +882,7 @@
     costEl.textContent = formatCost(data.totalCost);
 
     if (data.equivalent) {
-      equivEl.textContent = `${data.equivalent.emoji} ${data.equivalent.name} ${data.equivalent.count}잔`;
+      equivEl.textContent = `${data.equivalent.emoji} ${data.equivalent.name} ${data.equivalent.count}${data.equivalent.unit || '개'}`;
     } else if (data.totalCost === 0) {
       equivEl.textContent = '지갑이 평화롭습니다';
     } else {
