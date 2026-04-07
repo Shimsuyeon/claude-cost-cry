@@ -13,6 +13,7 @@ let config = {};
 let topRequests = [];
 let exchangeInfo = null;
 let costByProvider = {};
+let _toEquivalent = null;
 
 const WIDGET_WIDTH = 280;
 const WIDGET_HEIGHT = 140;
@@ -194,32 +195,8 @@ function getTier(cost) {
 }
 
 function getEquivalent(cost) {
-  if (cost < 0.01) return null;
-
-  const defaultItems = [
-    { name: '아이스 아메리카노', price: 4.5, emoji: '☕', unit: '잔' },
-    { name: '점심', price: 8, emoji: '🍱', unit: '끼' },
-    { name: '치킨', price: 17, emoji: '🍗', unit: '마리' },
-  ];
-
-  const custom = config.customEquivalents || [];
-  const allItems = [...custom, ...defaultItems];
-  const unit = config.equivalentUnit || 'auto';
-
-  if (unit !== 'auto') {
-    const fixed = allItems.find(i => i.name === unit);
-    if (fixed) {
-      return { ...fixed, count: Math.round((cost / fixed.price) * 10) / 10 };
-    }
-  }
-
-  for (const item of allItems) {
-    const count = cost / item.price;
-    if (count >= 0.1) {
-      return { ...item, count: Math.round(count * 10) / 10 };
-    }
-  }
-  return { ...allItems[0], count: Math.round((cost / allItems[0].price) * 10) / 10 };
+  if (_toEquivalent) return _toEquivalent(cost, config);
+  return null;
 }
 
 function getBudgetStatus(cost, budget) {
@@ -258,10 +235,11 @@ function updateTrayTitle() {
 
 async function startCostTracking() {
   const { scanToday, startWatching } = await import('../src/watcher.js');
-  const { calculateCost } = await import('../src/calculator.js');
+  const { calculateCost, toEquivalent: _toEquiv } = await import('../src/calculator.js');
   const { loadConfig } = await import('../src/config.js');
   const { getExchangeRate } = await import('../src/exchange.js');
 
+  _toEquivalent = _toEquiv;
   config = loadConfig();
   exchangeInfo = await getExchangeRate(config);
 
