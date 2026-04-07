@@ -2,29 +2,100 @@
 
 [![npm version](https://img.shields.io/npm/v/claude-cost-cry.svg)](https://www.npmjs.com/package/claude-cost-cry)
 [![license](https://img.shields.io/npm/l/claude-cost-cry.svg)](LICENSE)
+[![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-ffdd00?style=flat&logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/shimsuyeon)
 
 > Your wallet cries every time you call Claude. Watch it happen in real-time.
 
 [한국어](README.ko.md)
 
-## What is this?
+```bash
+npm install -g claude-cost-cry
+```
 
-A real-time cost tracker for Claude Code (and other LLM providers) that makes you *feel* every dollar leaving your wallet — with emotional messages, everyday equivalents, and a floating desktop widget.
+<div align="center">
+<img width="320" alt="overlay" src="https://github.com/user-attachments/assets/fd8da839-cad9-4b15-998a-7b5eb4a93b9b" />
+</div>
 
+A floating desktop widget that makes you _feel_ every dollar leaving your wallet — with emotional messages, everyday equivalents, and real-time cost tracking.
 
-<img width="300" alt="image" src="https://github.com/user-attachments/assets/fd8da839-cad9-4b15-998a-7b5eb4a93b9b" />
+## Quick Start
 
+```bash
+cost-cry          # Launch floating overlay widget
+```
 
+That's it. The widget appears in the top-right corner and starts tracking immediately.
+
+> On macOS, you may need to run `xattr -cr node_modules/electron/dist/Electron.app` on first launch.
+
+## Features
+
+### Floating Overlay Widget
+
+<div>
+<img width="300" alt="panels" src="https://github.com/user-attachments/assets/ffd41048-6576-4a68-854a-0642b89acee5" />
+<img width="300" alt="panels" src="https://github.com/user-attachments/assets/5d84231b-27eb-45a4-80a5-2da6de4162ae" />
+</div>
+
+- Emoji and color change based on cost tier
+- Bounce animation + cost flash on new API calls
+- Widget shakes when cost exceeds $30
+- Drag to reposition, toggle from system tray
+- Expandable panels: daily chart, model breakdown, top 3 expensive requests
+- Settings panel: budget, currency, language, equivalent unit, one-click update
+
+### Emotional Cost Tiers
+
+| Cost Range | Emoji | Mood    | Example Message                                         |
+| ---------- | ----- | ------- | ------------------------------------------------------- |
+| $0 – $1    | 🪙    | Peace   | "No worries, this is practically free"                  |
+| $1 – $5    | 💸    | Uneasy  | "Starting to cost as much as vending machine coffee..." |
+| $5 – $10   | 🔥    | Worry   | "Is this really okay...?"                               |
+| $10 – $30  | 🚨    | Alert   | "Am I paying Claude a salary...?"                       |
+| $30 – $100 | 💀    | Danger  | "The bank account is screaming"                         |
+| $100+      | ⚰️    | Funeral | "🚨 WARNING: This API key is on fire 🚨"                |
+
+### Multi-Provider Support
+
+Track costs across multiple LLM providers:
+
+- 🟣 **Claude Code** — automatic (local JSONL logs)
+- ⚡ **Cursor IDE** — API polling (`cost-cry config --add-source cursor`)
+- 🟢 **OpenAI** — local logs (`cost-cry config --add-source openai:/path/to/logs`)
+- 🔵 **Google Gemini** — local logs (`cost-cry config --add-source google:/path/to/logs`)
+
+### Everyday Equivalents
+
+Your cost is converted into relatable items — because "$3.50" means nothing, but "🍲 Gukbap 0.6" hurts:
+
+☕ Iced Americano · 🍢 Tteokbokki · 🍲 Gukbap · 🍱 Lunch · 🍗 Fried Chicken · 📺 Netflix · 🥤 Frappuccino
+
+Customizable via CLI or overlay settings. Add your own units too.
+
+## CLI
+
+```bash
+cost-cry cli                       # Real-time terminal tracking
+cost-cry report                    # Weekly report
+cost-cry report --monthly          # Monthly report
+cost-cry config                    # View current settings
+cost-cry config --daily-budget 10  # Set daily budget ($10)
+cost-cry config --currency KRW     # Switch display currency
+cost-cry config --language ko      # Switch to Korean
+cost-cry config --nudge off        # Disable savings nudge
+```
+
+<details>
+<summary>CLI output example</summary>
 
 ```
-$ cost-cry
+$ cost-cry cli
 
-  🪙 claude-cost-cry v0.3.0
+  🪙 claude-cost-cry v0.3.3
   Emotionally experience your API costs
 
-  📊 Today's total: $2.41 (☕ Iced Americano 0.5)
+  📊 Today's total: $2.41 (☕ Iced Americano 0.8)
      12 API calls
-     🌤️ Starting to spend a bit...
 
   ────────────────────────────────────────────────────────
   Watching... (Ctrl+C to exit)
@@ -39,136 +110,39 @@ $ cost-cry
      "Your wallet is literally crying"
 ```
 
-<div>
-<img width="300" alt="image" src="https://github.com/user-attachments/assets/ffd41048-6576-4a68-854a-0642b89acee5" />
-<img width="300" alt="image" src="https://github.com/user-attachments/assets/5d84231b-27eb-45a4-80a5-2da6de4162ae" />
-</div>
+</details>
 
-## Emotional Cost Tiers
-
-| Cost Range | Emoji | Mood | Example Message |
-|-----------|-------|------|-----------------|
-| $0 – $1 | 🪙 | Peace | "No worries, this is practically free" |
-| $1 – $5 | 💸 | Uneasy | "Starting to cost as much as vending machine coffee..." |
-| $5 – $10 | 🔥 | Worry | "Is this really okay...?" |
-| $10 – $30 | 🚨 | Alert | "Am I paying Claude a salary...?" |
-| $30 – $100 | 💀 | Danger | "The bank account is screaming" |
-| $100+ | ⚰️ | Funeral | "🚨 WARNING: This API key is on fire 🚨" |
-
-## Installation
-
-```bash
-npm install -g claude-cost-cry
-```
-
-> **[npm package](https://www.npmjs.com/package/claude-cost-cry)** · Requires Node.js >= 18
-
-## Usage
-
-### Overlay Mode (Floating Widget) — Default
-
-```bash
-cost-cry
-```
-
-Launches a floating desktop widget (top-right corner) that tracks costs in real time:
-- Emoji and color change based on cost tier
-- Bounce animation + cost flash on new API calls
-- Widget shakes when cost exceeds $30
-- Toggle from system tray
-- Drag to reposition
-- Expandable panels: daily chart, model breakdown, top 3 expensive requests, settings
-
-> On macOS, you may need to run `xattr -cr node_modules/electron/dist/Electron.app` on first launch.
-
-### CLI Mode (Terminal)
-
-```bash
-cost-cry cli
-```
-
-Real-time tracking in your terminal:
-1. Scans today's accumulated cost
-2. Watches for new Claude Code API calls in real time
-3. Displays cost + emotional message on each call
-4. Shows session summary on `Ctrl+C` exit
-
-### Reports
-
-```bash
-cost-cry report            # Weekly report
-cost-cry report --monthly  # Monthly report
-```
-
-ASCII bar charts with per-day costs, model breakdown, and savings simulation.
-
-### Configuration
-
-```bash
-cost-cry config                     # View current settings
-cost-cry config --daily-budget 10   # Set daily budget ($10)
-cost-cry config --daily-budget off  # Remove budget
-cost-cry config --currency KRW      # Switch display currency
-cost-cry config --nudge off         # Disable savings nudge
-cost-cry config --language ko       # Switch to Korean
-cost-cry config --add-source cursor # Track Cursor IDE usage
-```
-
-#### Budget Alerts
+### Budget Alerts
 
 When a budget is set:
-- 70% → 💡 warning, 90% → ⚠️ warning, 100% → 🚫 exceeded
-- Displayed in both CLI and overlay widget
 
-#### Savings Nudge
+- 70% → 💡 warning, 90% → ⚠️ warning, 100% → 🚫 exceeded
+
+### Savings Nudge
 
 Shows how much you could save using a cheaper model — in real time:
 
 ```
-  [14:32:15] Opus  📥 15.2K 📤 1.2K
-  🔥 +$0.38  →  Total: $8.73
-     💡 Would be $0.02 with Haiku (save $0.36)
+  💡 Would be $0.02 with Haiku (save $0.36)
 ```
-
-#### Multi-Provider Support
-
-Track costs across multiple LLM providers:
-- 🟣 **Claude Code** — automatic (local JSONL logs)
-- ⚡ **Cursor IDE** — API polling (`cost-cry config --add-source cursor`)
-- 🟢 **OpenAI** — local logs (`cost-cry config --add-source openai:/path/to/logs`)
-- 🔵 **Google Gemini** — local logs (`cost-cry config --add-source google:/path/to/logs`)
-
-#### Language
-
-Default language is **English**. Switch to Korean:
-
-```bash
-cost-cry config --language ko
-```
-
-Also available in the overlay settings panel.
 
 ## How It Works
 
-Claude Code saves all API call logs as JSONL files under `~/.claude/projects/`. cost-cry watches these files in real time:
-
-1. Extracts token usage from the `usage` field of assistant responses
-2. Calculates cost based on official model pricing
-3. Displays emotional messages based on cost tier
+Claude Code saves API call logs as JSONL files under `~/.claude/projects/`. cost-cry watches these files in real time, extracts token usage, and calculates cost based on official pricing.
 
 **No proxy or API key required.** Only reads local log files (or polls Cursor's internal API).
 
 ## Supported Models & Pricing
 
-| Model | Input ($/1M) | Output ($/1M) |
-|-------|-------------|---------------|
-| Claude Opus | $15.00 | $75.00 |
-| Claude Sonnet | $3.00 | $15.00 |
-| Claude Haiku | $0.80 | $4.00 |
-| GPT-4o | $2.50 | $10.00 |
-| GPT-4o mini | $0.15 | $0.60 |
-| Gemini 2.5 Pro | $1.25 | $10.00 |
-| Gemini Flash | $0.075 | $0.30 |
+| Model          | Input ($/1M) | Output ($/1M) |
+| -------------- | ------------ | ------------- |
+| Claude Opus    | $15.00       | $75.00        |
+| Claude Sonnet  | $3.00        | $15.00        |
+| Claude Haiku   | $0.80        | $4.00         |
+| GPT-4o         | $2.50        | $10.00        |
+| GPT-4o mini    | $0.15        | $0.60         |
+| Gemini 2.5 Pro | $1.25        | $10.00        |
+| Gemini Flash   | $0.075       | $0.30         |
 
 Cache tokens are automatically reflected (write: 1.25x, read: 0.1x).
 
@@ -184,4 +158,3 @@ Cost calculations are **estimates for reference**. For exact billing, check the 
 ## License
 
 MIT
-
