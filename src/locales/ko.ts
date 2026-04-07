@@ -85,6 +85,8 @@ const ko = {
   'equiv.netflix.unit': '개월',
   'equiv.tteokbokki': '떡볶이',
   'equiv.tteokbokki.unit': '인분',
+  'equiv.gukbap': '뜨끈한 국밥',
+  'equiv.gukbap.unit': '그릇',
   'equiv.frappuccino': '스타벅스 프라푸치노',
   'equiv.frappuccino.unit': '잔',
 

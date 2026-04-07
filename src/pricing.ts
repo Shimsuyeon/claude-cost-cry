@@ -30,16 +30,17 @@ export function getModelLabel(modelName: string): string {
 
 export function getEquivalents(): EquivalentItem[] {
   return [
-    { key: 'americano', name: t('equiv.americano'), price: 4.5, emoji: '☕', unit: t('equiv.americano.unit') },
+    { key: 'americano', name: t('equiv.americano'), price: 3, emoji: '☕', unit: t('equiv.americano.unit') },
     { key: 'lunch', name: t('equiv.lunch'), price: 8, emoji: '🍱', unit: t('equiv.lunch.unit') },
     { key: 'tteokbokki', name: t('equiv.tteokbokki'), price: 3.5, emoji: '🍢', unit: t('equiv.tteokbokki.unit') },
+    { key: 'gukbap', name: t('equiv.gukbap'), price: 5.5, emoji: '🍲', unit: t('equiv.gukbap.unit') },
     { key: 'chicken', name: t('equiv.chicken'), price: 17, emoji: '🍗', unit: t('equiv.chicken.unit') },
     { key: 'netflix', name: t('equiv.netflix'), price: 13, emoji: '📺', unit: t('equiv.netflix.unit') },
     { key: 'frappuccino', name: t('equiv.frappuccino'), price: 6, emoji: '🥤', unit: t('equiv.frappuccino.unit') },
   ];
 }
 
-const EQUIV_KEYS = ['americano', 'lunch', 'tteokbokki', 'chicken', 'netflix', 'frappuccino'] as const;
+const EQUIV_KEYS = ['americano', 'lunch', 'tteokbokki', 'gukbap', 'chicken', 'netflix', 'frappuccino'] as const;
 const locales = [en, ko] as const;
 
 export function resolveEquivKey(nameOrKey: string): string {

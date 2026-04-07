@@ -85,6 +85,8 @@ const en = {
   'equiv.netflix.unit': '',
   'equiv.tteokbokki': 'Tteokbokki',
   'equiv.tteokbokki.unit': '',
+  'equiv.gukbap': 'Gukbap',
+  'equiv.gukbap.unit': '',
   'equiv.frappuccino': 'Starbucks Frappuccino',
   'equiv.frappuccino.unit': '',
 
