@@ -249,7 +249,7 @@
   }
 
   /* ── Settings panel ── */
-  .settings-panel.open { max-height: 320px; }
+  .settings-panel.open { max-height: 420px; }
 
   .setting-row {
     display: flex;
@@ -382,7 +382,7 @@
   }
 
   /* ── TOP 3 panel ── */
-  .top-panel.open { max-height: 280px; overflow-y: auto; }
+  .top-panel.open { max-height: 320px; }
 
   .top-summary {
     font-size: 10px;
@@ -683,6 +683,22 @@
     color: rgba(255, 255, 255, 0.6);
   }
 
+  .quit-btn {
+    background: none;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: rgba(255, 255, 255, 0.3);
+    font-size: 9px;
+    padding: 3px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-top: 8px;
+    transition: all 0.15s;
+  }
+  .quit-btn:hover {
+    color: rgba(255, 100, 100, 0.7);
+    border-color: rgba(255, 100, 100, 0.3);
+  }
+
   .daily-row {
     display: flex;
     align-items: center;
@@ -835,6 +851,9 @@
       <span style="color: rgba(255,255,255,0.15)">·</span>
       <a href="https://github.com/Shimsuyeon" target="_blank" id="footerGithub">GitHub @Shimsuyeon</a>
     </div>
+    <div style="text-align: center;">
+      <button class="quit-btn" id="quitBtn">Quit</button>
+    </div>
   </div>
 </div>
 
@@ -908,6 +927,7 @@
     document.getElementById('lblLang').textContent = loc('settings.language');
     saveBtn.textContent = loc('settings.save');
     updateBtn.textContent = loc('settings.checkUpdate');
+    document.getElementById('quitBtn').textContent = loc('settings.quit');
 
     const autoOpt = unitSelect.querySelector('option[value="auto"]');
     if (autoOpt) autoOpt.textContent = loc('settings.autoUnit');
@@ -1229,6 +1249,12 @@
   window.bridge.onReportRefreshed(({ data }) => {
     if (activePanel === 'chart') loadChart(data);
     if (activePanel === 'models') loadModels(data);
+  });
+
+  // ── Quit button ──
+
+  document.getElementById('quitBtn').addEventListener('click', () => {
+    window.bridge.quitApp();
   });
 
   // ── Update check ──

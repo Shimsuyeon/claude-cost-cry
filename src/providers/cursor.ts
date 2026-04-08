@@ -238,12 +238,19 @@ const provider: Provider & {
     return usages;
   },
 
-  startPolling(onNewUsage: (usage: Usage) => void, interval = 60_000): { close(): void } | null {
-    if (!this.isAvailable!() || !this.getSessionToken!()) return null;
+  startPolling(onNewUsage: (usage: Usage) => void, interval = 30_000): { close(): void } | null {
+    if (!this.isAvailable!()) return null;
 
     let lastTs = this._lastPollTimestamp || Date.now();
+    let consecutiveFailures = 0;
 
     const poll = async () => {
+      const token = this.getSessionToken!();
+      if (!token) {
+        consecutiveFailures++;
+        return;
+      }
+
       try {
         const now = Date.now();
         const data = await this.fetchUsageEvents!(
@@ -261,7 +268,9 @@ const provider: Provider & {
           }
         }
         lastTs = maxTs;
+        consecutiveFailures = 0;
       } catch (err) {
+        consecutiveFailures++;
         if (err instanceof Error && err.message?.includes('expired')) {
           this.clearTokenCache!();
         }

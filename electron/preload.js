@@ -13,4 +13,5 @@ contextBridge.exposeInMainWorld('bridge', {
   checkUpdate: () => ipcRenderer.invoke('check-update'),
   runUpdate: () => ipcRenderer.invoke('run-update'),
   resizeWidget: (expanded) => ipcRenderer.send('resize-widget', expanded),
+  quitApp: () => ipcRenderer.send('quit-app'),
 });
