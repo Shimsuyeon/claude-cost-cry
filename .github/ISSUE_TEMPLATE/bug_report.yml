@@ -1,0 +1,75 @@
+name: "Bug Report (버그 제보)"
+description: "Report a bug to help us improve (버그를 제보해주세요)"
+labels: ["bug"]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: "What happened? (어떤 문제가 발생했나요?)"
+      description: "Describe the bug clearly. Screenshots are very helpful. (스크린샷을 첨부하면 큰 도움이 됩니다.)"
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: "Expected behavior (기대한 동작)"
+      description: "What did you expect to happen? (어떻게 동작해야 한다고 생각하셨나요?)"
+    validations:
+      required: false
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: "Steps to reproduce (재현 방법)"
+      description: "How can we reproduce this? (어떻게 하면 이 버그를 재현할 수 있나요?)"
+      placeholder: |
+        1. Run `cost-cry`
+        2. Click on '...'
+        3. See error
+    validations:
+      required: false
+
+  - type: dropdown
+    id: provider
+    attributes:
+      label: "Provider (사용 중인 AI)"
+      options:
+        - Claude Code
+        - Cursor
+        - OpenAI
+        - Gemini
+        - Multiple (여러 개)
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: "Version (버전)"
+      description: "Run `cost-cry --version` to check. (설정 패널 하단에서도 확인 가능합니다.)"
+      placeholder: "e.g. 0.3.5"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: "OS"
+      options:
+        - macOS
+        - Windows
+        - Linux
+    validations:
+      required: true
+
+  - type: dropdown
+    id: interface
+    attributes:
+      label: "Interface (사용 환경)"
+      options:
+        - Overlay (Electron GUI)
+        - CLI
+        - Both (둘 다)
+    validations:
+      required: true
