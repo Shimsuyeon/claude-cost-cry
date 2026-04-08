@@ -293,6 +293,65 @@ async function startCostTracking() {
   }, config);
 }
 
+function startPeriodicRescan() {
+  setInterval(async () => {
+    try {
+      const { scanToday } = await import('../dist/watcher.js');
+      const { calculateCost } = await import('../dist/calculator.js');
+
+      const { usages } = await scanToday(config);
+      let newTotal = 0;
+      const newCostByProvider = {};
+      const newTopRequests = [];
+
+      for (const usage of usages) {
+        const cost = calculateCost(usage);
+        newTotal += cost;
+        const p = usage.provider || 'claude';
+        newCostByProvider[p] = (newCostByProvider[p] || 0) + cost;
+        recordRequestToList(newTopRequests, usage, cost);
+      }
+
+      if (Math.abs(newTotal - totalCost) > 0.001 || usages.length !== callCount) {
+        totalCost = newTotal;
+        callCount = usages.length;
+        costByProvider = newCostByProvider;
+        topRequests = newTopRequests;
+        updateTrayTitle();
+        sendCostUpdate(null, 0);
+      }
+    } catch {
+      // silent fallback
+    }
+  }, 30_000);
+}
+
+function recordRequestToList(list, usage, cost) {
+  const totalInput = (usage.inputTokens || 0) + (usage.cacheCreationTokens || 0) + (usage.cacheReadTokens || 0);
+  const locale = (config.language || 'en') === 'ko' ? 'ko-KR' : 'en-US';
+  const time = usage.timestamp
+    ? new Date(usage.timestamp).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })
+    : '';
+  const provider = usage.provider || 'claude';
+  const modelLabel = getModelLabelLocal(usage);
+  const fullPrompt = cleanPrompt(usage.prompt);
+
+  list.push({
+    cost,
+    provider,
+    providerEmoji: PROVIDER_META[provider]?.emoji || '⚪',
+    model: modelLabel,
+    time,
+    inputTokens: totalInput,
+    outputTokens: usage.outputTokens || 0,
+    prompt: truncatePrompt(fullPrompt),
+    fullPrompt: fullPrompt,
+  });
+
+  list.sort((a, b) => b.cost - a.cost);
+  if (list.length > 3) list.length = 3;
+}
+
 function createTrayIcon() {
   const iconPath = path.join(__dirname, '..', 'assets', 'tray-icon.png');
   if (fs.existsSync(iconPath)) {
@@ -305,7 +364,21 @@ function createTrayIcon() {
   return nativeImage.createEmpty();
 }
 
-// ── App lifecycle ────────────────────────────────────────────────────────────
+// ── Single instance lock ─────────────────────────────────────────────────────
+const gotTheLock = app.requestSingleInstanceLock();
+
+if (!gotTheLock) {
+  app.quit();
+} else {
+
+app.on('second-instance', () => {
+  if (overlay) {
+    overlay.show();
+  } else {
+    createOverlay();
+  }
+});
+
 app.whenReady().then(async () => {
   if (process.platform === 'darwin') {
     app.dock.hide();
@@ -410,6 +483,7 @@ app.whenReady().then(async () => {
   });
 
   await startCostTracking();
+  startPeriodicRescan();
 
   tray = new Tray(createTrayIcon());
   tray.setContextMenu(
@@ -427,3 +501,5 @@ app.whenReady().then(async () => {
 });
 
 app.on('window-all-closed', (e) => e.preventDefault());
+
+} // end of gotTheLock
