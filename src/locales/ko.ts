@@ -153,6 +153,7 @@ const ko = {
   'settings.save': '저장',
   'settings.saved': '✓ 저장됨',
   'settings.checkUpdate': '업데이트 확인',
+  'settings.quit': '종료',
   'settings.updateAvailable': 'v{version} 업데이트 가능',
   'settings.latestVersion': '✓ 최신 버전',
   'settings.checking': '확인 중...',

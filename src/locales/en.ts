@@ -153,6 +153,7 @@ const en = {
   'settings.save': 'Save',
   'settings.saved': '✓ Saved',
   'settings.checkUpdate': 'Check update',
+  'settings.quit': 'Quit',
   'settings.updateAvailable': 'v{version} available',
   'settings.latestVersion': '✓ Up to date',
   'settings.checking': 'Checking...',
