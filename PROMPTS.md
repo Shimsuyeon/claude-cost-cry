@@ -1,0 +1,17 @@
+# Prompt History
+
+> This document is not a guide for reproducing this project.
+> It is a transparent record of the intent and context behind code created through conversation with AI.
+>
+> 이 문서는 프로젝트를 재현하기 위한 가이드가 아닙니다.
+> AI와의 대화로 만들어진 코드의 의도와 맥락을 투명하게 공개하기 위한 기록입니다.
+
+**Language**: Korean (as-is, unedited)
+
+---
+
+## Sessions
+
+| File | Period | Commits | Summary |
+|------|--------|---------|---------|
+| [v0.1-v0.3](./prompts/v0.1-v0.3.md) | 2026-04-07 ~ 04-08 | `7e51991` ~ `8dfdb64` (29) | 초기 구현 → Electron 오버레이 → 멀티 프로바이더 → i18n → npm 배포 |
