@@ -382,7 +382,7 @@
   }
 
   /* ── TOP 3 panel ── */
-  .top-panel.open { max-height: 320px; }
+  .top-panel.open { max-height: 420px; overflow-y: auto; }
 
   .top-summary {
     font-size: 10px;
@@ -474,6 +474,51 @@
 
   .top-tokens .tok-in { color: rgba(100, 200, 255, 0.5); }
   .top-tokens .tok-out { color: rgba(255, 180, 100, 0.5); }
+
+  .cost-split {
+    font-size: 9px;
+    margin-left: 28px;
+    margin-bottom: 2px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .cost-split .split-label {
+    font-weight: 500;
+    flex-shrink: 0;
+  }
+
+  .cost-split .split-label.label-in { color: rgba(100, 200, 255, 0.6); }
+  .cost-split .split-label.label-out { color: rgba(255, 180, 100, 0.6); }
+
+  .cost-split .split-value {
+    font-weight: 700;
+  }
+
+  .cost-split .split-value.val-in { color: rgba(100, 200, 255, 0.85); }
+  .cost-split .split-value.val-out { color: rgba(255, 180, 100, 0.85); }
+
+  .cost-split .split-pct {
+    color: rgba(255, 255, 255, 0.3);
+    font-weight: 400;
+  }
+
+
+  .top-more-btn {
+    font-size: 9px;
+    color: rgba(255, 255, 255, 0.35);
+    text-align: center;
+    padding: 4px 0;
+    cursor: pointer;
+    transition: color 0.15s;
+    margin-top: 2px;
+  }
+
+  .top-more-btn:hover { color: rgba(255, 255, 255, 0.6); }
+
+  .top-extra { display: none; }
+  .top-extra.show { display: block; }
 
   .top-empty {
     font-size: 11px;
@@ -1109,8 +1154,9 @@
       return;
     }
 
-    const medals = ['🥇', '🥈', '🥉'];
-    topList.innerHTML = items.map((req, i) => {
+    const medals = ['🥇', '🥈', '🥉', '④', '⑤'];
+
+    function renderItem(req, i) {
       const modelKey = req.model.toLowerCase();
       const isCursor = req.provider === 'cursor';
       const modelClass = isCursor ? 'cursor'
@@ -1121,11 +1167,33 @@
       const promptHtml = req.prompt
         ? `<div class="top-prompt" data-idx="${i}" ${hasFullPrompt ? `title="${loc('overlay.clickToExpand')}"` : ''}>💬 ${escapeHtml(req.prompt)}</div>`
         : '';
-      const tokIn = req.inputTokens || 0;
-      const tokOut = req.outputTokens || 0;
-      const tokensHtml = (tokIn || tokOut)
-        ? `<div class="top-tokens"><span class="tok-in">↓ ${formatTokens(tokIn)}</span><span class="tok-out">↑ ${formatTokens(tokOut)}</span></div>`
-        : '';
+
+      const inCost = req.inputCost || 0;
+      const outCost = req.outputCost || 0;
+      const costTotal = inCost + outCost;
+      const inPct = costTotal > 0 ? Math.round((inCost / costTotal) * 100) : 0;
+      const outPct = costTotal > 0 ? 100 - inPct : 0;
+
+      let detailHtml = '';
+      if (costTotal > 0) {
+        detailHtml = `
+          <div class="cost-split">
+            <span class="split-label label-in">↓ ${loc('overlay.costInput')}</span>
+            <span class="split-value val-in">${formatCost(inCost)}</span>
+            <span class="split-pct">(${inPct}%)</span>
+            <span class="split-label label-out" style="margin-left:4px">↑ ${loc('overlay.costOutput')}</span>
+            <span class="split-value val-out">${formatCost(outCost)}</span>
+            <span class="split-pct">(${outPct}%)</span>
+          </div>
+        `;
+      } else {
+        const tokIn = req.inputTokens || 0;
+        const tokOut = req.outputTokens || 0;
+        detailHtml = (tokIn || tokOut)
+          ? `<div class="top-tokens"><span class="tok-in">↓ ${formatTokens(tokIn)}</span><span class="tok-out">↑ ${formatTokens(tokOut)}</span></div>`
+          : '';
+      }
+
       return `
         <div class="top-item">
           <span class="top-medal">${medals[i]}</span>
@@ -1134,9 +1202,29 @@
           <span class="top-time">${req.time || ''}</span>
         </div>
         ${promptHtml}
-        ${tokensHtml}
+        ${detailHtml}
       `;
-    }).join('');
+    }
+
+    const top3 = items.slice(0, 3).map((req, i) => renderItem(req, i)).join('');
+    const extra = items.slice(3).map((req, i) => renderItem(req, i + 3)).join('');
+
+    const moreBtn = items.length > 3
+      ? `<div class="top-more-btn" id="topMoreBtn">${loc('overlay.showMore', { count: items.length - 3 })}</div>`
+      : '';
+
+    topList.innerHTML = top3 + moreBtn + `<div class="top-extra" id="topExtra">${extra}</div>`;
+
+    const moreBtnEl = document.getElementById('topMoreBtn');
+    const extraEl = document.getElementById('topExtra');
+    if (moreBtnEl && extraEl) {
+      moreBtnEl.addEventListener('click', () => {
+        const isOpen = extraEl.classList.toggle('show');
+        moreBtnEl.textContent = isOpen
+          ? loc('overlay.showLess')
+          : loc('overlay.showMore', { count: items.length - 3 });
+      });
+    }
 
     topList.querySelectorAll('.top-prompt[data-idx]').forEach(el => {
       el.addEventListener('click', () => {

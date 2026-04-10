@@ -15,6 +15,7 @@ let topRequests = [];
 let exchangeInfo = null;
 let costByProvider = {};
 let _toEquivalent = null;
+let _calcBreakdown = null;
 let _t = null;
 let _localeStrings = null;
 
@@ -75,6 +76,11 @@ function truncatePrompt(text, maxLen = 30) {
   return text.slice(0, maxLen - 1) + "…";
 }
 
+function getCostBreakdown(usage, totalCost) {
+  if (_calcBreakdown) return _calcBreakdown(usage);
+  return { inputCost: totalCost, outputCost: 0 };
+}
+
 function recordRequest(usage, cost) {
   const totalInput =
     (usage.inputTokens || 0) +
@@ -91,9 +97,12 @@ function recordRequest(usage, cost) {
   const provider = usage.provider || "claude";
   const modelLabel = getModelLabelLocal(usage);
   const fullPrompt = cleanPrompt(usage.prompt);
+  const breakdown = getCostBreakdown(usage, cost);
 
   topRequests.push({
     cost,
+    inputCost: breakdown.inputCost,
+    outputCost: breakdown.outputCost,
     provider,
     providerEmoji: PROVIDER_META[provider]?.emoji || "⚪",
     model: modelLabel,
@@ -105,7 +114,7 @@ function recordRequest(usage, cost) {
   });
 
   topRequests.sort((a, b) => b.cost - a.cost);
-  if (topRequests.length > 3) topRequests.length = 3;
+  if (topRequests.length > 5) topRequests.length = 5;
 }
 
 const PROVIDER_META = {
@@ -285,7 +294,7 @@ function updateTrayTitle() {
 
 async function startCostTracking() {
   const { scanToday, startWatching } = await import("../dist/watcher.js");
-  const { calculateCost, toEquivalent: _toEquiv } =
+  const { calculateCost, calculateCostBreakdown, toEquivalent: _toEquiv } =
     await import("../dist/calculator.js");
   const { loadConfig } = await import("../dist/config.js");
   const { getExchangeRate } = await import("../dist/exchange.js");
@@ -293,6 +302,7 @@ async function startCostTracking() {
 
   _t = t;
   _toEquivalent = _toEquiv;
+  _calcBreakdown = calculateCostBreakdown;
   config = loadConfig();
   if (config.language) setLocale(config.language);
   _localeStrings = getLocaleStrings();
@@ -378,9 +388,12 @@ function recordRequestToList(list, usage, cost) {
   const provider = usage.provider || "claude";
   const modelLabel = getModelLabelLocal(usage);
   const fullPrompt = cleanPrompt(usage.prompt);
+  const breakdown = getCostBreakdown(usage, cost);
 
   list.push({
     cost,
+    inputCost: breakdown.inputCost,
+    outputCost: breakdown.outputCost,
     provider,
     providerEmoji: PROVIDER_META[provider]?.emoji || "⚪",
     model: modelLabel,
@@ -392,7 +405,7 @@ function recordRequestToList(list, usage, cost) {
   });
 
   list.sort((a, b) => b.cost - a.cost);
-  if (list.length > 3) list.length = 3;
+  if (list.length > 5) list.length = 5;
 }
 
 function createTrayIcon() {

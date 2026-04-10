@@ -49,7 +49,7 @@ const en = {
   'display.budget90Alert': '🔴 90% of budget reached — remaining: {remaining}',
   'display.cumulative': 'Total:',
   'display.nudge': '💡 Would be {cost} with {model} (save {saving})',
-  'display.topExpensive': "Today's Top 3 Most Expensive Requests",
+  'display.topExpensive': "Today's Most Expensive Requests",
   'display.sessionCost': '📋 Session cost:',
   'display.todayCost': "📊 Today's total cost:",
   'display.potentialSavings': '💡 Could have saved: {amount} (cheapest model)',
@@ -136,6 +136,10 @@ const en = {
   'overlay.callsSuffix': '',
   'overlay.savingHint': '💡 {from} → {to} could save {saving}',
   'overlay.clickToExpand': 'Click to see full text',
+  'overlay.costInput': 'Input',
+  'overlay.costOutput': 'Output',
+  'overlay.showMore': '+{count} more',
+  'overlay.showLess': 'Show less',
 
   // ── overlay: tooltips ──
   'tooltip.chart': 'Daily cost',
