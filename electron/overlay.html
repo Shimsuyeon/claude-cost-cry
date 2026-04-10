@@ -382,7 +382,7 @@
   }
 
   /* ── TOP 3 panel ── */
-  .top-panel.open { max-height: 320px; }
+  .top-panel.open { max-height: 420px; overflow-y: auto; }
 
   .top-summary {
     font-size: 10px;
@@ -504,6 +504,21 @@
     font-weight: 400;
   }
 
+
+  .top-more-btn {
+    font-size: 9px;
+    color: rgba(255, 255, 255, 0.35);
+    text-align: center;
+    padding: 4px 0;
+    cursor: pointer;
+    transition: color 0.15s;
+    margin-top: 2px;
+  }
+
+  .top-more-btn:hover { color: rgba(255, 255, 255, 0.6); }
+
+  .top-extra { display: none; }
+  .top-extra.show { display: block; }
 
   .top-empty {
     font-size: 11px;
@@ -1139,8 +1154,9 @@
       return;
     }
 
-    const medals = ['🥇', '🥈', '🥉'];
-    topList.innerHTML = items.map((req, i) => {
+    const medals = ['🥇', '🥈', '🥉', '④', '⑤'];
+
+    function renderItem(req, i) {
       const modelKey = req.model.toLowerCase();
       const isCursor = req.provider === 'cursor';
       const modelClass = isCursor ? 'cursor'
@@ -1154,12 +1170,12 @@
 
       const inCost = req.inputCost || 0;
       const outCost = req.outputCost || 0;
-      const total = inCost + outCost;
-      const inPct = total > 0 ? Math.round((inCost / total) * 100) : 0;
-      const outPct = total > 0 ? 100 - inPct : 0;
+      const costTotal = inCost + outCost;
+      const inPct = costTotal > 0 ? Math.round((inCost / costTotal) * 100) : 0;
+      const outPct = costTotal > 0 ? 100 - inPct : 0;
 
       let detailHtml = '';
-      if (total > 0) {
+      if (costTotal > 0) {
         detailHtml = `
           <div class="cost-split">
             <span class="split-label label-in">↓ ${loc('overlay.costInput')}</span>
@@ -1188,7 +1204,27 @@
         ${promptHtml}
         ${detailHtml}
       `;
-    }).join('');
+    }
+
+    const top3 = items.slice(0, 3).map((req, i) => renderItem(req, i)).join('');
+    const extra = items.slice(3).map((req, i) => renderItem(req, i + 3)).join('');
+
+    const moreBtn = items.length > 3
+      ? `<div class="top-more-btn" id="topMoreBtn">${loc('overlay.showMore', { count: items.length - 3 })}</div>`
+      : '';
+
+    topList.innerHTML = top3 + moreBtn + `<div class="top-extra" id="topExtra">${extra}</div>`;
+
+    const moreBtnEl = document.getElementById('topMoreBtn');
+    const extraEl = document.getElementById('topExtra');
+    if (moreBtnEl && extraEl) {
+      moreBtnEl.addEventListener('click', () => {
+        const isOpen = extraEl.classList.toggle('show');
+        moreBtnEl.textContent = isOpen
+          ? loc('overlay.showLess')
+          : loc('overlay.showMore', { count: items.length - 3 });
+      });
+    }
 
     topList.querySelectorAll('.top-prompt[data-idx]').forEach(el => {
       el.addEventListener('click', () => {

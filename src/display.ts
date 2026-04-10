@@ -178,7 +178,7 @@ export function showTopExpensive(topRequests: TopRequest[], exchange: ExchangeIn
   console.log();
 
   topRequests.forEach((req, i) => {
-    const medal = ['🥇', '🥈', '🥉'][i];
+    const medal = ['🥇', '🥈', '🥉', '④', '⑤', '⑥', '⑦', '⑧', '⑨', '⑩'][i] || `${i + 1}`;
     const pEmoji = req.providerEmoji ? `${req.providerEmoji} ` : '';
     const modelColor = req.provider === 'cursor' ? chalk.hex('#06b6d4')
       : /opus/i.test(req.model) ? chalk.magenta

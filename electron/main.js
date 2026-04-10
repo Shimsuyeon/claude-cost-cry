@@ -114,7 +114,7 @@ function recordRequest(usage, cost) {
   });
 
   topRequests.sort((a, b) => b.cost - a.cost);
-  if (topRequests.length > 3) topRequests.length = 3;
+  if (topRequests.length > 5) topRequests.length = 5;
 }
 
 const PROVIDER_META = {
@@ -405,7 +405,7 @@ function recordRequestToList(list, usage, cost) {
   });
 
   list.sort((a, b) => b.cost - a.cost);
-  if (list.length > 3) list.length = 3;
+  if (list.length > 5) list.length = 5;
 }
 
 function createTrayIcon() {

@@ -36,7 +36,7 @@ function recordRequest(topRequests: TopRequest[], usage: Usage, cost: number): v
   });
 
   topRequests.sort((a, b) => b.cost - a.cost);
-  if (topRequests.length > 3) topRequests.length = 3;
+  if (topRequests.length > 5) topRequests.length = 5;
 }
 
 export async function main(): Promise<void> {
