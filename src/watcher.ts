@@ -160,6 +160,7 @@ export function startWatching(
       usePolling: true,
       interval: 1000,
       binaryInterval: 1000,
+      ignored: /\/subagents\//,
       awaitWriteFinish: {
         stabilityThreshold: 300,
         pollInterval: 200,
@@ -224,7 +225,7 @@ export function startWatching(
   };
 }
 
-async function findJsonlFiles(dir: string): Promise<string[]> {
+export async function findJsonlFiles(dir: string): Promise<string[]> {
   const files: string[] = [];
 
   async function walk(currentDir: string): Promise<void> {
@@ -233,6 +234,7 @@ async function findJsonlFiles(dir: string): Promise<string[]> {
       for (const entry of entries) {
         const fullPath = join(currentDir, entry.name);
         if (entry.isDirectory()) {
+          if (entry.name === 'subagents') continue;
           await walk(fullPath);
         } else if (entry.name.endsWith('.jsonl')) {
           files.push(fullPath);

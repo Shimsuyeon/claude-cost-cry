@@ -1,8 +1,7 @@
-import { readFile, readdir } from 'node:fs/promises';
-import { join } from 'node:path';
+import { readFile } from 'node:fs/promises';
 import { calculateCost } from './calculator.js';
 import { loadConfig } from './config.js';
-import { buildLogSources } from './watcher.js';
+import { buildLogSources, findJsonlFiles } from './watcher.js';
 import { getProvider } from './providers/index.js';
 import { t } from './i18n.js';
 import type { DailyData, DailyStats } from './types.js';
@@ -166,25 +165,3 @@ export function computeStats(dailyData: DailyData[]): DailyStats {
   return { totalCost, avgDaily: daysActive > 0 ? totalCost / daysActive : 0, maxDay, minDay, totalCalls, daysActive };
 }
 
-async function findJsonlFiles(dir: string): Promise<string[]> {
-  const files: string[] = [];
-
-  async function walk(currentDir: string): Promise<void> {
-    try {
-      const entries = await readdir(currentDir, { withFileTypes: true });
-      for (const entry of entries) {
-        const fullPath = join(currentDir, entry.name);
-        if (entry.isDirectory()) {
-          await walk(fullPath);
-        } else if (entry.name.endsWith('.jsonl')) {
-          files.push(fullPath);
-        }
-      }
-    } catch {
-      // skip
-    }
-  }
-
-  await walk(dir);
-  return files;
-}
