@@ -136,6 +136,8 @@ const ko = {
   'overlay.callsSuffix': '건',
   'overlay.savingHint': '💡 {from} → {to} 였다면 {saving} 절약',
   'overlay.clickToExpand': '클릭하면 전체 보기',
+  'overlay.costInput': '인풋',
+  'overlay.costOutput': '아웃풋',
 
   // ── overlay: tooltips ──
   'tooltip.chart': '일별 비용',

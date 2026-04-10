@@ -1,4 +1,4 @@
-import { calculateCost, getSavingsNudge } from './calculator.js';
+import { calculateCost, calculateCostBreakdown, getSavingsNudge } from './calculator.js';
 import { loadConfig, getBudgetStatus } from './config.js';
 import { showBanner, showTodaySummary, showCostUpdate, showBudgetAlert, showShutdown, showError, showInfo } from './display.js';
 import { scanToday, startWatching, getClaudeProjectsDir, buildLogSources } from './watcher.js';
@@ -20,9 +20,12 @@ function recordRequest(topRequests: TopRequest[], usage: Usage, cost: number): v
   const time = usage.timestamp
     ? new Date(usage.timestamp).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })
     : '';
+  const breakdown = calculateCostBreakdown(usage);
 
   topRequests.push({
     cost,
+    inputCost: breakdown.inputCost,
+    outputCost: breakdown.outputCost,
     provider: usage.provider,
     providerEmoji: getProviderEmoji(usage.provider),
     model: getModelLabel(usage),

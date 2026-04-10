@@ -136,6 +136,8 @@ const en = {
   'overlay.callsSuffix': '',
   'overlay.savingHint': '💡 {from} → {to} could save {saving}',
   'overlay.clickToExpand': 'Click to see full text',
+  'overlay.costInput': 'Input',
+  'overlay.costOutput': 'Output',
 
   // ── overlay: tooltips ──
   'tooltip.chart': 'Daily cost',
