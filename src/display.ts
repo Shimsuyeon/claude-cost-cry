@@ -1,5 +1,5 @@
 import chalk from 'chalk';
-import { formatCostShort, formatTokenCount, toEquivalent, getSavingsNudge } from './calculator.js';
+import { formatCostShort, formatTokenCount, toEquivalent, getSavingsNudge, calculateCostBreakdown } from './calculator.js';
 import { getMessage, getStartupMood } from './messages.js';
 import { formatLocalCost } from './exchange.js';
 import { getModelLabel as getProviderModelLabel, getProviderEmoji, getProviderDisplayName } from './providers/index.js';
@@ -178,7 +178,7 @@ export function showTopExpensive(topRequests: TopRequest[], exchange: ExchangeIn
   console.log();
 
   topRequests.forEach((req, i) => {
-    const medal = ['🥇', '🥈', '🥉'][i];
+    const medal = ['🥇', '🥈', '🥉', '④', '⑤', '⑥', '⑦', '⑧', '⑨', '⑩'][i] || `${i + 1}`;
     const pEmoji = req.providerEmoji ? `${req.providerEmoji} ` : '';
     const modelColor = req.provider === 'cursor' ? chalk.hex('#06b6d4')
       : /opus/i.test(req.model) ? chalk.magenta
@@ -192,7 +192,17 @@ export function showTopExpensive(topRequests: TopRequest[], exchange: ExchangeIn
     if (req.prompt) {
       console.log(chalk.white(`     💬 "${req.prompt}"`));
     }
-    console.log(chalk.gray(`     📥 ${formatTokenCount(req.inputTokens)} 📤 ${formatTokenCount(req.outputTokens)}`));
+
+    const inCost = req.inputCost || 0;
+    const outCost = req.outputCost || 0;
+    const total = inCost + outCost;
+    if (total > 0) {
+      const inPct = Math.round((inCost / total) * 100);
+      const outPct = 100 - inPct;
+      console.log(`     ${chalk.cyan(`📥 ${fc(inCost, exchange)}`)} ${chalk.gray(`(${inPct}%)`)}  ${chalk.hex('#ffb464')(`📤 ${fc(outCost, exchange)}`)} ${chalk.gray(`(${outPct}%)`)}`);
+    } else {
+      console.log(chalk.gray(`     📥 ${formatTokenCount(req.inputTokens)} 📤 ${formatTokenCount(req.outputTokens)}`));
+    }
   });
 }
 

@@ -76,6 +76,8 @@ export interface BudgetStatus {
 
 export interface TopRequest {
   cost: number;
+  inputCost?: number;
+  outputCost?: number;
   model: string;
   provider?: string;
   providerEmoji?: string;

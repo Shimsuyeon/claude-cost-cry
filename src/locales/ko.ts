@@ -49,7 +49,7 @@ const ko = {
   'display.budget90Alert': '🔴 예산 90% 도달 — 남은 예산: {remaining}',
   'display.cumulative': '누적:',
   'display.nudge': '💡 {model}로 했으면 {cost} ({saving} 절약)',
-  'display.topExpensive': '오늘의 가장 비싼 요청 TOP 3',
+  'display.topExpensive': '오늘의 가장 비싼 요청',
   'display.sessionCost': '📋 이번 세션 비용:',
   'display.todayCost': '📊 오늘 총 비용:',
   'display.potentialSavings': '💡 절약 가능했던 금액: {amount} (최저가 모델 기준)',
@@ -136,6 +136,10 @@ const ko = {
   'overlay.callsSuffix': '건',
   'overlay.savingHint': '💡 {from} → {to} 였다면 {saving} 절약',
   'overlay.clickToExpand': '클릭하면 전체 보기',
+  'overlay.costInput': '인풋',
+  'overlay.costOutput': '아웃풋',
+  'overlay.showMore': '+{count}건 더보기',
+  'overlay.showLess': '접기',
 
   // ── overlay: tooltips ──
   'tooltip.chart': '일별 비용',

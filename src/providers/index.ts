@@ -32,6 +32,17 @@ export function calculateCost(usage: Usage): number {
   return provider.calculateCost(usage);
 }
 
+export function calculateCostBreakdown(usage: Usage): { inputCost: number; outputCost: number } {
+  const provider = PROVIDERS[usage.provider];
+  if (!provider) return { inputCost: 0, outputCost: 0 };
+  const pricing = provider.resolveModel(usage.model);
+  const inputCost = (usage.inputTokens / 1e6) * pricing.input
+                  + (usage.cacheCreationTokens / 1e6) * (pricing.cacheWrite || 0)
+                  + (usage.cacheReadTokens / 1e6) * (pricing.cacheRead || 0);
+  const outputCost = (usage.outputTokens / 1e6) * pricing.output;
+  return { inputCost, outputCost };
+}
+
 export function getModelLabel(usage: Usage): string {
   const provider = PROVIDERS[usage.provider];
   if (!provider) return usage.model;

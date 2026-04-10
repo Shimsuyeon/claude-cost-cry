@@ -1,5 +1,5 @@
 import { getPricing, getEquivalents, resolveEquivKey } from './pricing.js';
-import { calculateCost as providerCalculateCost, getProvider } from './providers/index.js';
+import { calculateCost as providerCalculateCost, calculateCostBreakdown as providerCostBreakdown, getProvider } from './providers/index.js';
 import type { Usage, Config, EquivalentResult, SavingsNudge } from './types.js';
 
 export function calculateCost(usage: Usage): number {
@@ -12,6 +12,18 @@ export function calculateCost(usage: Usage): number {
        + (usage.outputTokens / 1e6) * pricing.output
        + (usage.cacheCreationTokens / 1e6) * (pricing.cacheWrite || 0)
        + (usage.cacheReadTokens / 1e6) * (pricing.cacheRead || 0);
+}
+
+export function calculateCostBreakdown(usage: Usage): { inputCost: number; outputCost: number } {
+  if (usage.provider) {
+    return providerCostBreakdown(usage);
+  }
+  const pricing = getPricing(usage.model);
+  const inputCost = (usage.inputTokens / 1e6) * pricing.input
+                  + (usage.cacheCreationTokens / 1e6) * (pricing.cacheWrite || 0)
+                  + (usage.cacheReadTokens / 1e6) * (pricing.cacheRead || 0);
+  const outputCost = (usage.outputTokens / 1e6) * pricing.output;
+  return { inputCost, outputCost };
 }
 
 export function formatCost(cost: number): string {
