@@ -1194,10 +1194,14 @@
           : '';
       }
 
+      const callsBadge = req.callCount > 1
+        ? ` <span style="font-size:9px;color:rgba(255,200,100,0.7)">(${loc('overlay.groupCalls', { count: req.callCount })})</span>`
+        : '';
+
       return `
         <div class="top-item">
           <span class="top-medal">${medals[i]}</span>
-          <span class="top-cost">${formatCost(req.cost)}</span>
+          <span class="top-cost">${formatCost(req.cost)}${callsBadge}</span>
           <span class="top-model ${modelClass}">${pEmoji}${req.model}</span>
           <span class="top-time">${req.time || ''}</span>
         </div>

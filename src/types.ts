@@ -87,6 +87,21 @@ export interface TopRequest {
   prompt?: string | null;
 }
 
+export interface PromptGroup {
+  prompt: string | null;
+  fullPrompt: string | null;
+  totalCost: number;
+  inputCost: number;
+  outputCost: number;
+  callCount: number;
+  provider: string;
+  providerEmoji: string;
+  model: string;
+  time: string;
+  totalInputTokens: number;
+  totalOutputTokens: number;
+}
+
 export interface SavingsNudge {
   model: string;
   cost: number;

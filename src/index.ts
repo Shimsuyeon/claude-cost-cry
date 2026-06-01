@@ -4,8 +4,15 @@ import { showBanner, showTodaySummary, showCostUpdate, showBudgetAlert, showShut
 import { scanToday, startWatching, getClaudeProjectsDir, buildLogSources } from './watcher.js';
 import { getExchangeRate } from './exchange.js';
 import { getModelLabel, getProviderEmoji, getProviderDisplayName, getProvider } from './providers/index.js';
+import { groupRequests } from './grouping.js';
 import { t } from './i18n.js';
-import type { Usage, TopRequest, BudgetStatus } from './types.js';
+import type { Usage, BudgetStatus } from './types.js';
+import type { RequestRecord } from './grouping.js';
+
+function cleanPrompt(text: string | null | undefined): string | null {
+  if (!text) return null;
+  return text.replace(/\s+/g, ' ').trim();
+}
 
 function truncatePrompt(text: string | null | undefined, maxLen = 30): string | null {
   if (!text) return null;
@@ -14,15 +21,16 @@ function truncatePrompt(text: string | null | undefined, maxLen = 30): string | 
   return clean.slice(0, maxLen - 1) + '…';
 }
 
-function recordRequest(topRequests: TopRequest[], usage: Usage, cost: number): void {
+function buildRecord(usage: Usage, cost: number): RequestRecord {
   const totalInput = usage.inputTokens + usage.cacheCreationTokens + usage.cacheReadTokens;
   const locale = (loadConfig().language || 'en') === 'ko' ? 'ko-KR' : 'en-US';
   const time = usage.timestamp
     ? new Date(usage.timestamp).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })
     : '';
   const breakdown = calculateCostBreakdown(usage);
+  const fullPrompt = cleanPrompt(usage.prompt);
 
-  topRequests.push({
+  return {
     cost,
     inputCost: breakdown.inputCost,
     outputCost: breakdown.outputCost,
@@ -32,11 +40,10 @@ function recordRequest(topRequests: TopRequest[], usage: Usage, cost: number): v
     time,
     inputTokens: totalInput,
     outputTokens: usage.outputTokens,
-    prompt: truncatePrompt(usage.prompt),
-  });
-
-  topRequests.sort((a, b) => b.cost - a.cost);
-  if (topRequests.length > 5) topRequests.length = 5;
+    prompt: truncatePrompt(fullPrompt),
+    fullPrompt,
+    timestampMs: usage.timestamp ? new Date(usage.timestamp).getTime() : Date.now(),
+  };
 }
 
 export async function main(): Promise<void> {
@@ -73,14 +80,14 @@ export async function main(): Promise<void> {
   let totalCost = 0;
   let callCount = todayUsages.length;
   let totalPotentialSavings = 0;
-  const topRequests: TopRequest[] = [];
+  const allRequests: RequestRecord[] = [];
   const costByProvider: Record<string, number> = {};
 
   for (const usage of todayUsages) {
     const cost = calculateCost(usage);
     totalCost += cost;
     costByProvider[usage.provider] = (costByProvider[usage.provider] || 0) + cost;
-    recordRequest(topRequests, usage, cost);
+    allRequests.push(buildRecord(usage, cost));
     const nudge = getSavingsNudge(usage, cost);
     if (nudge) totalPotentialSavings += nudge.saving;
   }
@@ -101,7 +108,7 @@ export async function main(): Promise<void> {
     callCount++;
     costByProvider[usage.provider] = (costByProvider[usage.provider] || 0) + cost;
 
-    recordRequest(topRequests, usage, cost);
+    allRequests.push(buildRecord(usage, cost));
 
     const nudge = getSavingsNudge(usage, cost);
     if (nudge) totalPotentialSavings += nudge.saving;
@@ -125,7 +132,8 @@ export async function main(): Promise<void> {
 
   const shutdown = () => {
     const sessionCost = totalCost - sessionStartCost;
-    showShutdown(sessionCost, totalCost, totalPotentialSavings, topRequests, config, exchange, costByProvider);
+    const topGroups = groupRequests(allRequests);
+    showShutdown(sessionCost, totalCost, totalPotentialSavings, topGroups, config, exchange, costByProvider);
     watcher!.close();
     process.exit(0);
   };

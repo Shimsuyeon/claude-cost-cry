@@ -11,8 +11,9 @@ let watcher = null;
 let totalCost = 0;
 let callCount = 0;
 let config = {};
-let topRequests = [];
+let allRequests = [];
 let exchangeInfo = null;
+let _groupRequests = null;
 let costByProvider = {};
 let _toEquivalent = null;
 let _calcBreakdown = null;
@@ -81,7 +82,7 @@ function getCostBreakdown(usage, totalCost) {
   return { inputCost: totalCost, outputCost: 0 };
 }
 
-function recordRequest(usage, cost) {
+function buildRequestRecord(usage, cost) {
   const totalInput =
     (usage.inputTokens || 0) +
     (usage.cacheCreationTokens || 0) +
@@ -95,26 +96,48 @@ function recordRequest(usage, cost) {
     : "";
 
   const provider = usage.provider || "claude";
-  const modelLabel = getModelLabelLocal(usage);
   const fullPrompt = cleanPrompt(usage.prompt);
   const breakdown = getCostBreakdown(usage, cost);
 
-  topRequests.push({
+  return {
     cost,
     inputCost: breakdown.inputCost,
     outputCost: breakdown.outputCost,
     provider,
     providerEmoji: PROVIDER_META[provider]?.emoji || "⚪",
-    model: modelLabel,
+    model: getModelLabelLocal(usage),
     time,
     inputTokens: totalInput,
     outputTokens: usage.outputTokens || 0,
     prompt: truncatePrompt(fullPrompt),
-    fullPrompt: fullPrompt,
-  });
+    fullPrompt,
+    timestampMs: usage.timestamp
+      ? new Date(usage.timestamp).getTime()
+      : Date.now(),
+  };
+}
 
-  topRequests.sort((a, b) => b.cost - a.cost);
-  if (topRequests.length > 5) topRequests.length = 5;
+function recordRequest(usage, cost) {
+  allRequests.push(buildRequestRecord(usage, cost));
+}
+
+function getTopGroups() {
+  if (!_groupRequests) return [];
+  const groups = _groupRequests(allRequests);
+  return groups.map((g) => ({
+    cost: g.totalCost,
+    inputCost: g.inputCost,
+    outputCost: g.outputCost,
+    provider: g.provider,
+    providerEmoji: g.providerEmoji,
+    model: g.model,
+    time: g.time,
+    inputTokens: g.totalInputTokens,
+    outputTokens: g.totalOutputTokens,
+    prompt: truncatePrompt(g.fullPrompt),
+    fullPrompt: g.fullPrompt,
+    callCount: g.callCount,
+  }));
 }
 
 const PROVIDER_META = {
@@ -167,7 +190,7 @@ function buildPayload(deltaCost, usage) {
     equivalent: getEquivalent(totalCost),
     budget: budgetStatus,
     nudge: usage ? getNudgeInfo(usage, deltaCost) : null,
-    topRequests,
+    topRequests: getTopGroups(),
     exchange: exchangeInfo,
     costByProvider,
     locale: _localeStrings,
@@ -299,6 +322,8 @@ async function startCostTracking() {
   const { loadConfig } = await import("../dist/config.js");
   const { getExchangeRate } = await import("../dist/exchange.js");
   const { t, setLocale, getLocaleStrings } = await import("../dist/i18n.js");
+  const { groupRequests } = await import("../dist/grouping.js");
+  _groupRequests = groupRequests;
 
   _t = t;
   _toEquivalent = _toEquiv;
@@ -346,14 +371,14 @@ function startPeriodicRescan() {
       const { usages } = await scanToday(config);
       let newTotal = 0;
       const newCostByProvider = {};
-      const newTopRequests = [];
+      const newAllRequests = [];
 
       for (const usage of usages) {
         const cost = calculateCost(usage);
         newTotal += cost;
         const p = usage.provider || "claude";
         newCostByProvider[p] = (newCostByProvider[p] || 0) + cost;
-        recordRequestToList(newTopRequests, usage, cost);
+        newAllRequests.push(buildRequestRecord(usage, cost));
       }
 
       if (
@@ -363,7 +388,7 @@ function startPeriodicRescan() {
         totalCost = newTotal;
         callCount = usages.length;
         costByProvider = newCostByProvider;
-        topRequests = newTopRequests;
+        allRequests = newAllRequests;
         updateTrayTitle();
         sendCostUpdate(null, 0);
       }
@@ -371,41 +396,6 @@ function startPeriodicRescan() {
       // silent fallback
     }
   }, 30_000);
-}
-
-function recordRequestToList(list, usage, cost) {
-  const totalInput =
-    (usage.inputTokens || 0) +
-    (usage.cacheCreationTokens || 0) +
-    (usage.cacheReadTokens || 0);
-  const locale = (config.language || "en") === "ko" ? "ko-KR" : "en-US";
-  const time = usage.timestamp
-    ? new Date(usage.timestamp).toLocaleTimeString(locale, {
-        hour: "2-digit",
-        minute: "2-digit",
-      })
-    : "";
-  const provider = usage.provider || "claude";
-  const modelLabel = getModelLabelLocal(usage);
-  const fullPrompt = cleanPrompt(usage.prompt);
-  const breakdown = getCostBreakdown(usage, cost);
-
-  list.push({
-    cost,
-    inputCost: breakdown.inputCost,
-    outputCost: breakdown.outputCost,
-    provider,
-    providerEmoji: PROVIDER_META[provider]?.emoji || "⚪",
-    model: modelLabel,
-    time,
-    inputTokens: totalInput,
-    outputTokens: usage.outputTokens || 0,
-    prompt: truncatePrompt(fullPrompt),
-    fullPrompt: fullPrompt,
-  });
-
-  list.sort((a, b) => b.cost - a.cost);
-  if (list.length > 5) list.length = 5;
 }
 
 function createTrayIcon() {

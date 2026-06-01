@@ -49,7 +49,8 @@ const ko = {
   'display.budget90Alert': '🔴 예산 90% 도달 — 남은 예산: {remaining}',
   'display.cumulative': '누적:',
   'display.nudge': '💡 {model}로 했으면 {cost} ({saving} 절약)',
-  'display.topExpensive': '오늘의 가장 비싼 요청',
+  'display.topExpensive': '오늘의 가장 비싼 프롬프트',
+  'display.groupCalls': '({count}건 호출)',
   'display.sessionCost': '📋 이번 세션 비용:',
   'display.todayCost': '📊 오늘 총 비용:',
   'display.potentialSavings': '💡 절약 가능했던 금액: {amount} (최저가 모델 기준)',
@@ -125,7 +126,7 @@ const ko = {
   'overlay.nudge': '💡 {model}로 했으면 {saving} 절약',
   'overlay.chartTitle': '📊 일별 비용 (최근 7일)',
   'overlay.modelsTitle': '🏷️ 모델별 비용 비교',
-  'overlay.topTitle': '🏆 오늘의 가장 비싼 요청',
+  'overlay.topTitle': '🏆 오늘의 가장 비싼 프롬프트',
   'overlay.topSummary': '📋 오늘 {count}건 · 평균 {avg}/건',
   'overlay.noRequests': '아직 요청이 없습니다',
   'overlay.loading': '로딩 중...',
@@ -140,6 +141,7 @@ const ko = {
   'overlay.costOutput': '아웃풋',
   'overlay.showMore': '+{count}건 더보기',
   'overlay.showLess': '접기',
+  'overlay.groupCalls': '{count}건 호출',
 
   // ── overlay: tooltips ──
   'tooltip.chart': '일별 비용',
